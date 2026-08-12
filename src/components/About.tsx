@@ -1,26 +1,43 @@
 import { motion } from 'framer-motion';
-import { GraduationCap, Medal, Target, UsersRound, CheckCircle2 } from 'lucide-react';
+import {
+  GraduationCap, Medal, Sparkles, Award, Dumbbell,
+  BookOpen, CheckCircle2, FileCheck, Activity, Heart, UsersRound, CalendarDays,
+} from 'lucide-react';
 
-const highlights = [
+const academicEducation = [
   {
     icon: GraduationCap,
-    title: 'Formação Acadêmica',
-    text: 'Bacharelado em Educação Física + Pós-graduação em Fisiologia do Exercício',
+    title: 'Bacharelado + Licenciatura',
+    text: 'Educação Física pela UniNorte (formação dupla)',
   },
   {
-    icon: Medal,
-    title: 'Certificações',
-    text: 'CREF ativo, especialista em Hipertrofia e Emagrecimento pela USP',
+    icon: Activity,
+    title: 'Pós-graduação',
+    text: 'Fisiologia do Exercício (prescrição baseada em evidência)',
   },
   {
-    icon: Target,
-    title: 'Metodologia',
-    text: 'Método 3P: Personalizado, Progressivo e Projetado para seu corpo',
+    icon: Heart,
+    title: 'Pós-graduação',
+    text: 'Gerontologia e Psicomotricidade Motora (público maduro)',
+  },
+];
+
+const certifications = [
+  {
+    icon: FileCheck,
+    title: 'Análise de Movimentos na Musculação',
+  },
+  {
+    icon: Award,
+    title: 'Avaliação Física',
+  },
+  {
+    icon: Dumbbell,
+    title: 'Hipertrofia Muscular na Prática',
   },
   {
     icon: UsersRound,
-    title: 'Atendimento Humanizado',
-    text: 'Acompanhamento próximo, suporte diário e ajustes semanais no treino',
+    title: 'Competências Sócio-emocionais na Educação Esportiva',
   },
 ];
 
@@ -29,7 +46,7 @@ export default function About() {
     <section id="sobre" className="py-24 md:py-32 relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent/5 rounded-full blur-3xl pointer-events-none" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className="grid lg:grid-cols-2 gap-14 lg:gap-20 items-center">
+        <div className="grid lg:grid-cols-2 gap-14 lg:gap-20 items-start">
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -41,33 +58,31 @@ export default function About() {
             <div className="relative rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl">
               <img
                 src="/assets/sobre.jpg"
-                alt="Thiago Mancilha - Personal Trainer"
-                className="w-full h-[520px] object-cover rounded-[2rem]"
+                alt="Thiago Mancilha Reis - Personal Trainer CREF 008289-G/AM"
+                className="w-full h-[560px] sm:h-[620px] object-cover rounded-[2rem]"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-background/10 to-transparent" />
             </div>
 
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-              className="absolute -bottom-6 -right-4 sm:-right-8 card-dark !bg-background p-5 shadow-neon max-w-xs"
+              transition={{ delay: 0.25 }}
+              className="absolute -bottom-6 left-4 sm:left-8 right-4 sm:right-auto card-dark !bg-background p-5 shadow-neon sm:max-w-sm"
             >
               <div className="flex items-center gap-3 mb-3">
-                <div className="flex">
-                  {[1,2,3,4,5].map((s) => (
-                    <svg key={s} className="w-5 h-5 text-accent" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
-                  ))}
-                </div>
-                <span className="text-xs text-text-secondary">Média de avaliações</span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[11px] font-bold uppercase tracking-widest">
+                  <Award className="w-3.5 h-3.5" strokeWidth={2.5} />
+                  CREF 008289-G/AM
+                </span>
               </div>
-              <p className="font-display font-bold text-text-primary text-3xl leading-none">
-                98% <span className="text-accent text-base">de satisfação</span>
+              <blockquote className="text-text-primary font-display font-bold text-lg sm:text-xl leading-snug">
+                &ldquo;Seu objetivo é o ponto de partida. A sua evolução é o nosso processo.&rdquo;
+              </blockquote>
+              <p className="text-xs text-text-muted mt-3">
+                — Thiago Mancilha Reis
               </p>
-              <p className="text-xs text-text-muted mt-1">Acompanhamento próximo em cada etapa</p>
             </motion.div>
           </motion.div>
 
@@ -84,42 +99,85 @@ export default function About() {
             </span>
 
             <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-text-primary leading-tight tracking-tight">
-              Olá, eu sou <span className="text-gradient">Thiago Macilha</span><br/>
-              seu Personal Trainer.
+              Olá, eu sou <span className="text-gradient">Thiago Mancilha Reis</span>
             </h2>
-
-            <p className="text-text-secondary text-lg leading-relaxed">
-              Há mais de 8 anos ajudo pessoas comuns a transformarem seus corpos sem recorrer a medidas extremas. Meu método foi desenvolvido e validado na prática com mais de 500 alunos.
-            </p>
-            <p className="text-text-secondary text-base leading-relaxed">
-              Acredito que saúde e performance caminham juntas: treinos inteligentes, periodização estratégica e apoio no que realmente importa. Não vendemos promessas, entregamos resultados mensuráveis.
+            <p className="text-text-primary font-bold text-base sm:text-lg">
+              Educação Física · Bacharel e Licenciado (UniNorte) · CREF 008289-G/AM
             </p>
 
-            <div className="grid sm:grid-cols-2 gap-4 pt-4">
-              {highlights.map((h, i) => (
-                <motion.div
-                  key={h.title}
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.1 * i }}
-                  className="card-dark !bg-background-card/60 p-5 flex gap-4 hover:border-accent/30 transition-all group"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center text-accent shrink-0 group-hover:scale-110 transition-transform">
-                    <h.icon className="w-5 h-5" strokeWidth={2} />
-                  </div>
-                  <div>
-                    <h4 className="font-display font-bold text-text-primary text-base">{h.title}</h4>
-                    <p className="text-sm text-text-secondary mt-1 leading-relaxed">{h.text}</p>
-                  </div>
-                </motion.div>
-              ))}
+            <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-accent/30 bg-accent/5 text-accent font-bold text-sm sm:text-base">
+              <Sparkles className="w-4.5 h-4.5" strokeWidth={2.5} />
+              O básico que funciona.
             </div>
 
-            <div className="flex flex-wrap gap-4 pt-4">
-              {['Análise de biotipo', 'Reeducação alimentar', 'Suporte diário via app', 'Check-ins semanais'].map((i) => (
-                <div key={i} className="flex items-center gap-2 text-sm text-text-secondary">
-                  <CheckCircle2 className="w-4 h-4 text-accent shrink-0" strokeWidth={2.5} />
+            <p className="text-text-secondary text-base sm:text-lg leading-relaxed">
+              Com mais de 3 anos de experiência, transformar um corpo vai muito além de prescrever exercícios.
+              Meu propósito é ajudar cada aluno a <span className="font-semibold text-text-primary">acreditar no próprio potencial</span> e
+              superar limitações com um acompanhamento próximo, humano e baseado em ciência.
+            </p>
+            <p className="text-text-secondary text-base leading-relaxed">
+              Foco em <span className="font-semibold text-text-primary">saúde funcional, estética consciente, mobilidade e emagrecimento sem exageros</span> —
+              atendendo especialmente quem é sedentário, está acima do peso ou busca autonomia e motivação na maturidade.
+            </p>
+
+            <div className="space-y-4 pt-3">
+              <div>
+                <h4 className="inline-flex items-center gap-2 font-display font-black text-text-primary text-base sm:text-lg mb-3.5">
+                  <GraduationCap className="w-5 h-5 text-accent" strokeWidth={2.2} />
+                  Formação Acadêmica
+                </h4>
+                <div className="grid sm:grid-cols-1 gap-3">
+                  {academicEducation.map((h, i) => (
+                    <motion.div
+                      key={h.title}
+                      initial={{ opacity: 0, y: 15 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.06 * i }}
+                      className="card-dark !bg-background-card/70 p-4 sm:p-5 flex gap-4 border-white/5 hover:border-accent/25 transition-all group"
+                    >
+                      <div className="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center text-accent shrink-0 group-hover:scale-110 transition-transform">
+                        <h.icon className="w-5 h-5" strokeWidth={2} />
+                      </div>
+                      <div>
+                        <h5 className="font-display font-bold text-text-primary text-sm sm:text-base leading-snug">{h.title}</h5>
+                        <p className="text-xs sm:text-sm text-text-secondary mt-1 leading-relaxed">{h.text}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="inline-flex items-center gap-2 font-display font-black text-text-primary text-base sm:text-lg mb-3.5 mt-5">
+                  <BookOpen className="w-5 h-5 text-accent" strokeWidth={2.2} />
+                  Certificações
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {certifications.map((c) => (
+                    <div
+                      key={c.title}
+                      className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-white/5 border border-white/5"
+                    >
+                      <CheckCircle2 className="w-4.5 h-4.5 text-accent shrink-0 mt-0.5" strokeWidth={2.5} />
+                      <span className="text-xs sm:text-sm text-text-secondary leading-relaxed font-medium">
+                        {c.title}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 pt-4">
+              {[
+                'Acompanhamento 1:1 próximo',
+                'Atendemos público maduro / idosos',
+                'Sem exageros, sem promessas',
+                'Avaliação física detalhada',
+              ].map((i) => (
+                <div key={i} className="flex items-center gap-2 text-xs sm:text-sm text-text-secondary bg-white/5 border border-white/5 px-3 py-2 rounded-lg">
+                  <CalendarDays className="w-4 h-4 text-accent shrink-0" strokeWidth={2} />
                   {i}
                 </div>
               ))}

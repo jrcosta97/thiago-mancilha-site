@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Calendar, Dumbbell } from 'lucide-react';
+import { Menu, X, Calendar, Dumbbell, Award } from 'lucide-react';
 
 interface HeaderProps {
   onCTAClick: () => void;
@@ -18,7 +18,8 @@ export default function Header({ onCTAClick }: HeaderProps) {
 
   const navLinks = [
     { label: 'Sobre', href: '#sobre' },
-    { label: 'Serviços', href: '#servicos' },
+    { label: 'Conteúdo', href: '#conteudo' },
+    { label: 'Planos', href: '#servicos' },
     { label: 'Resultados', href: '#resultados' },
     { label: 'FAQ', href: '#faq' },
   ];
@@ -37,20 +38,21 @@ export default function Header({ onCTAClick }: HeaderProps) {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         <a href="#top" className="flex items-center gap-3 group" onClick={(e) => { e.preventDefault(); handleNavClick('#top'); }}>
-          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Dumbbell className="w-5 h-5 text-background" strokeWidth={2.5} />
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-transform shadow-neon">
+            <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6 text-background" strokeWidth={2.5} />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="font-display font-extrabold text-text-primary text-lg tracking-tight">
-              Thiago Mancilha<span className="text-accent">.</span>
+            <span className="font-display font-extrabold text-text-primary text-base sm:text-lg tracking-tight">
+              Thiago Mancilha Reis<span className="text-accent">.</span>
             </span>
-            <span className="text-[11px] text-text-secondary tracking-wider uppercase">
-              Personal Trainer
+            <span className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-text-secondary tracking-wider uppercase">
+              <Award className="w-3 h-3 text-accent" strokeWidth={2.5} />
+              CREF 008289-G/AM · O básico que funciona.
             </span>
           </div>
         </a>
 
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-7">
           {navLinks.map((l) => (
             <a
               key={l.href}
@@ -67,10 +69,10 @@ export default function Header({ onCTAClick }: HeaderProps) {
         <div className="hidden md:block">
           <button
             onClick={onCTAClick}
-            className="btn-primary !py-2.5 !px-5 text-sm"
+            className="btn-primary !py-2.5 !px-5 sm:!px-6 text-sm whitespace-nowrap"
           >
             <Calendar className="w-4 h-4" strokeWidth={2.5} />
-            Agendar Consultoria
+            Agendar Avaliação Gratuita
           </button>
         </div>
 
@@ -107,7 +109,7 @@ export default function Header({ onCTAClick }: HeaderProps) {
                   className="btn-primary w-full !py-3 text-sm"
                 >
                   <Calendar className="w-4 h-4" strokeWidth={2.5} />
-                  Agendar Consultoria
+                  Agendar Avaliação Gratuita
                 </button>
               </div>
             </div>

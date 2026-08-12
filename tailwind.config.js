@@ -8,15 +8,54 @@ export default {
     extend: {
       colors: {
         background: {
-          DEFAULT: '#0B0F17',
+          DEFAULT: 'var(--background)',
           card: '#161F2E',
           darker: '#060910'
         },
+        foreground: 'var(--foreground)',
+        card: {
+          DEFAULT: 'var(--card)',
+          foreground: 'var(--card-foreground)',
+        },
+        popover: {
+          DEFAULT: 'var(--popover)',
+          foreground: 'var(--popover-foreground)',
+        },
+        primary: {
+          DEFAULT: 'var(--primary)',
+          foreground: 'var(--primary-foreground)',
+        },
+        secondary: {
+          DEFAULT: 'var(--secondary)',
+          foreground: 'var(--secondary-foreground)',
+        },
+        muted: {
+          DEFAULT: 'var(--muted)',
+          foreground: 'var(--muted-foreground)',
+        },
         accent: {
-          DEFAULT: '#CCFF00',
+          DEFAULT: 'var(--accent)',
+          foreground: 'var(--accent-foreground)',
           hover: '#b3e600',
           orange: '#FF5500',
           'orange-hover': '#e64d00'
+        },
+        destructive: {
+          DEFAULT: 'var(--destructive)',
+          foreground: 'var(--destructive-foreground)',
+        },
+        border: 'var(--border)',
+        input: 'var(--input)',
+        ring: 'var(--ring)',
+        sidebar: {
+          DEFAULT: 'var(--sidebar)',
+          foreground: 'var(--sidebar-foreground)',
+          primary: 'var(--sidebar-primary)',
+          'primary-foreground': 'var(--sidebar-primary-foreground)',
+          accent: 'var(--sidebar-accent)',
+          'accent-foreground': 'var(--sidebar-accent-foreground)',
+          border: 'var(--sidebar-border)',
+          ring: 'var(--sidebar-ring)',
         },
         text: {
           primary: '#F9FAFB',
@@ -32,6 +71,7 @@ export default {
         'float': 'float 3s ease-in-out infinite',
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
         'gradient': 'gradient 8s linear infinite',
+        'shimmer': 'shimmer 1.6s linear infinite',
       },
       keyframes: {
         float: {
@@ -45,6 +85,10 @@ export default {
         gradient: {
           '0%, 100%': { 'background-position': '0% 50%' },
           '50%': { 'background-position': '100% 50%' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
         }
       },
       boxShadow: {

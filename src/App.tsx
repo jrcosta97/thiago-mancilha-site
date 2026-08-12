@@ -1,57 +1,32 @@
 import { useState } from 'react';
-import Header from './components/Header';
-import Hero from './components/Hero';
-import Metrics from './components/Metrics';
-import About from './components/About';
-import Plans from './components/Plans';
-import Results from './components/Results';
-import TDEECalculator from './components/TDEECalculator';
-import FAQ from './components/FAQ';
-import Footer from './components/Footer';
-import WhatsAppFloat from './components/WhatsAppFloat';
-import AnamnesisForm from './components/AnamnesisForm';
+import Header from '@/components/Header';
+import Hero from '@/components/Hero';
+import About from '@/components/About';
+import Plans from '@/components/Plans';
+import Results from '@/components/Results';
+import TDEECalculator from '@/components/TDEECalculator';
+import FAQ from '@/components/FAQ';
+import Footer from '@/components/Footer';
+import AnamnesisForm from '@/components/AnamnesisForm';
 
 export default function App() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<string | undefined>(undefined);
-
-  const openModal = (plan?: string) => {
-    setSelectedPlan(plan);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-  };
+  const [anamnesisOpen, setAnamnesisOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background text-text-primary antialiased">
-      <Header onCTAClick={() => openModal()} />
-
+    <div id="top" className="min-h-screen bg-background text-foreground relative overflow-x-hidden">
+      <Header onCTAClick={() => setAnamnesisOpen(true)} />
       <main>
-        <Hero onCTAClick={() => openModal()} />
-
-        <Metrics />
-
+        <Hero onCTAClick={() => setAnamnesisOpen(true)} />
         <About />
-
-        <Plans onCTAClick={(p?) => openModal(p)} />
-
+        <Plans onCTAClick={() => setAnamnesisOpen(true)} />
         <Results />
-
-        <TDEECalculator onCTAClick={(p?) => openModal(p)} />
-
-        <FAQ onCTAClick={() => openModal()} />
+        <TDEECalculator />
+        <FAQ onCTAClick={() => setAnamnesisOpen(true)} />
       </main>
-
       <Footer />
-
-      <WhatsAppFloat onOpenModal={() => openModal()} />
-
       <AnamnesisForm
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        selectedPlan={selectedPlan}
+        isOpen={anamnesisOpen}
+        onClose={() => setAnamnesisOpen(false)}
       />
     </div>
   );
