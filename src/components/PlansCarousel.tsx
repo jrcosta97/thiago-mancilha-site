@@ -27,7 +27,7 @@ const plans = [
     badgeColor: '!bg-accent !text-background',
     highlight: true,
     icon: Crown,
-    image: '/assets/plano-presencial.jpg',
+    image: '/assets/plano-presencial.webp',
     features: [
       'Treino individual em estúdio equipado',
       'Prescrição adaptada à sua rotina',
@@ -46,7 +46,7 @@ const plans = [
     badge: 'Econômico',
     badgeColor: '!bg-blue-500/15 !text-blue-400 !border !border-blue-400/30',
     icon: Users,
-    image: '/assets/plano-anual.jpg',
+    image: '/assets/plano-anual.webp',
     features: [
       'Dupla de alunos (mesmo nível)',
       'Treino sincronizado + exercícios extras',
@@ -64,7 +64,7 @@ const plans = [
     badge: 'Melhor Custo-Benefício',
     badgeColor: '!bg-accent-orange/15 !text-accent-orange !border !border-accent-orange/30',
     icon: CalendarDays,
-    image: '/assets/extra.jpg',
+    image: '/assets/extra.webp',
     features: [
       '3 encontros presenciais semanais',
       'Roteiro para dias extra prescrito',
@@ -82,7 +82,7 @@ const plans = [
     badge: 'Brasil Todo',
     badgeColor: '!bg-emerald-500/15 !text-emerald-400 !border !border-emerald-400/30',
     icon: Globe2,
-    image: '/assets/plano-online.jpg',
+    image: '/assets/plano-online.webp',
     features: [
       'Planilha completa com vídeos demonstrativos',
       'Reajuste do treino mensal',

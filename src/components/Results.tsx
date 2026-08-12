@@ -110,26 +110,38 @@ export default function Results() {
           viewport={{ once: true }}
           className="w-full max-w-2xl mx-auto mb-10"
         >
-          <div className="relative rounded-full p-1 bg-white/5 border border-white/6">
+          <div className="relative rounded-full p-1.5 bg-slate-800/40 border border-white/8 shadow-[0_10px_40px_rgba(0,0,0,0.25)]">
             <div
-              className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-full bg-gradient-to-r from-accent/90 to-lime-400 transition-all duration-500 ${
-                activeCase === 'sergio' ? 'left-1' : 'left-[calc(50%+0.05rem)]'
+              className={`absolute top-1.5 bottom-1.5 w-[calc(50%-0.375rem)] rounded-full bg-gradient-to-r from-[#CCFF00] via-lime-300 to-emerald-400 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                activeCase === 'sergio' ? 'left-1.5' : 'left-[calc(50%+0.075rem)]'
               }`}
-              style={{ boxShadow: '0 8px 30px rgba(204, 255, 0, 0.25)' }}
+              style={{ boxShadow: '0 10px 30px rgba(204,255,0,0.55), 0 0 0 1px rgba(204,255,0,0.35) inset' }}
             />
             <div className="relative grid grid-cols-2 rounded-full">
-              {cases.map((c) => (
-                <button
-                  key={c.key}
-                  onClick={() => setActiveCase(c.key)}
-                  className={`z-10 h-11 sm:h-12 rounded-full text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 transition-colors px-2 sm:px-3 ${
-                    activeCase === c.key ? 'text-background' : 'text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4 shrink-0" strokeWidth={2.2} />
-                  <span className="truncate">{c.tabLabel}</span>
-                </button>
-              ))}
+              {cases.map((c) => {
+                const isActive = activeCase === c.key;
+                return (
+                  <button
+                    key={c.key}
+                    onClick={() => setActiveCase(c.key)}
+                    type="button"
+                    aria-pressed={isActive}
+                    className={`z-10 h-12 sm:h-13 rounded-full text-sm sm:text-base inline-flex items-center justify-center gap-2 transition-all duration-300 px-3 sm:px-5 ${
+                      isActive
+                        ? 'font-extrabold text-black tracking-tight'
+                        : 'font-semibold text-white/60 hover:text-white/85'
+                    }`}
+                  >
+                    <Sparkles
+                      className={`w-4.5 h-4.5 sm:w-5 sm:h-5 shrink-0 ${
+                        isActive ? 'text-black' : 'text-white/50'
+                      }`}
+                      strokeWidth={isActive ? 2.5 : 2.1}
+                    />
+                    <span className="truncate">{c.tabLabel}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </motion.div>

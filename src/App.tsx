@@ -1,33 +1,27 @@
-import { useState } from 'react';
-import Header from '@/components/Header';
-import Hero from '@/components/Hero';
-import About from '@/components/About';
-import Plans from '@/components/Plans';
-import Results from '@/components/Results';
-import TDEECalculator from '@/components/TDEECalculator';
-import FAQ from '@/components/FAQ';
-import Footer from '@/components/Footer';
-import AnamnesisForm from '@/components/AnamnesisForm';
+import { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+const Landing = lazy(() => import('@/pages/Landing'));
+const LinkBio = lazy(() => import('@/pages/LinkBio'));
 
 export default function App() {
-  const [anamnesisOpen, setAnamnesisOpen] = useState(false);
-
   return (
-    <div id="top" className="min-h-screen bg-background text-foreground relative overflow-x-hidden">
-      <Header onCTAClick={() => setAnamnesisOpen(true)} />
-      <main>
-        <Hero onCTAClick={() => setAnamnesisOpen(true)} />
-        <About />
-        <Plans onCTAClick={() => setAnamnesisOpen(true)} />
-        <Results />
-        <TDEECalculator />
-        <FAQ onCTAClick={() => setAnamnesisOpen(true)} />
-      </main>
-      <Footer />
-      <AnamnesisForm
-        isOpen={anamnesisOpen}
-        onClose={() => setAnamnesisOpen(false)}
-      />
-    </div>
+    <BrowserRouter>
+      <Suspense
+        fallback={
+          <div className="min-h-screen w-full bg-background flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin" />
+          </div>
+        }
+      >
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/linkbio" element={<LinkBio />} />
+          <Route path="/bio" element={<Navigate to="/linkbio" replace />} />
+          <Route path="/links" element={<Navigate to="/linkbio" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
   );
 }

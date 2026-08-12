@@ -138,7 +138,7 @@ export default function Hero({ onCTAClick }: HeroProps) {
             <div className="absolute -inset-[2px] bg-gradient-to-br from-lime-400/60 via-transparent to-emerald-400/40 rounded-[2rem] opacity-80 pointer-events-none" />
             <div className="relative rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl group">
               <img
-                src="/assets/hero.jpg"
+                src="/assets/hero.webp"
                 alt="Treino funcional e saudável"
                 className="w-full h-[480px] lg:h-[560px] object-cover rounded-[2rem] group-hover:scale-105 transition-transform duration-700"
               />

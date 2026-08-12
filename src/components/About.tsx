@@ -57,7 +57,7 @@ export default function About() {
             <div className="absolute -top-4 -left-4 w-full h-full rounded-[2rem] border-2 border-accent/30" />
             <div className="relative rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl">
               <img
-                src="/assets/sobre.jpg"
+                src="/assets/sobre.webp"
                 alt="Thiago Mancilha Reis - Personal Trainer CREF 008289-G/AM"
                 className="w-full h-[560px] sm:h-[620px] object-cover rounded-[2rem]"
               />
