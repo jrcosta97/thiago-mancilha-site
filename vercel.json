@@ -1,6 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "vite",
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
@@ -8,6 +7,16 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
+    {
+      "source": "/((?!.+\\.[\\w]+$|_next).*)",
+      "destination": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "(.*)"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
