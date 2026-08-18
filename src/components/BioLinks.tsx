@@ -1,8 +1,9 @@
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Target, Globe, Award,
   Instagram, Youtube, Linkedin,
-  ChevronRight,
+  ChevronRight, ArrowLeft,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
@@ -22,6 +23,7 @@ const links = [
     href: buildWhatsAppLink(
       'Olá Thiago! Vim pelo Linktree e quero agendar uma Avaliação Física Presencial em estúdio. Pode me passar os horários e valores disponíveis?'
     ),
+    external: true,
   },
   {
     id: 'online',
@@ -31,13 +33,23 @@ const links = [
     href: buildWhatsAppLink(
       'Olá Thiago! Vim pelo Linktree e quero começar uma Consultoria On-line. Como funciona o atendimento a distância e quais planos estão disponíveis?'
     ),
+    external: true,
   },
   {
     id: 'resultados',
     title: 'Casos de Sucesso',
-    subtitle: 'Veja a transformação de alunos reais',
+    subtitle: 'Veja a transformação de alunos reais na Landing',
     icon: Award,
-    href: '#resultados',
+    href: '/#resultados',
+    external: false,
+  },
+  {
+    id: 'home',
+    title: 'Voltar para o Site',
+    subtitle: 'Página principal com todos os serviços, planos e FAQ',
+    icon: ArrowLeft,
+    href: '/',
+    external: false,
   },
 ] as const;
 
@@ -125,28 +137,50 @@ export default function BioLinks() {
                 }}
                 className="w-full"
               >
-                <a
-                  href={link.href}
-                  target={link.href.startsWith('http') ? '_blank' : undefined}
-                  rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                  className="block group w-full"
-                >
-                  <Card
-                    className="hover:border-lime-400 hover:bg-slate-800/80 transition-all cursor-pointer w-full bg-slate-900 border border-slate-800/80 rounded-2xl flex flex-row items-center justify-start text-left p-4 gap-4 overflow-hidden"
+                {link.external ? (
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block group w-full"
                   >
-                    <div className="p-3 bg-lime-500/10 rounded-xl text-lime-400 flex-shrink-0">
-                      <Icon className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2} />
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col justify-center gap-1 text-left">
-                      <h2 className="font-bold text-base text-white leading-tight group-hover:text-lime-300 transition-colors">
-                        {link.title}
-                      </h2>
-                      <p className="text-xs text-slate-400 leading-snug line-clamp-2">
-                        {link.subtitle}
-                      </p>
-                    </div>
-                  </Card>
-                </a>
+                    <Card
+                      className="hover:border-lime-400 hover:bg-slate-800/80 transition-all cursor-pointer w-full bg-slate-900 border border-slate-800/80 rounded-2xl flex flex-row items-center justify-start text-left p-4 gap-4 overflow-hidden"
+                    >
+                      <div className="p-3 bg-lime-500/10 rounded-xl text-lime-400 flex-shrink-0">
+                        <Icon className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2} />
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1 text-left">
+                        <h2 className="font-bold text-base text-white leading-tight group-hover:text-lime-300 transition-colors">
+                          {link.title}
+                        </h2>
+                        <p className="text-xs text-slate-400 leading-snug line-clamp-2">
+                          {link.subtitle}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4.5 h-4.5 text-slate-500 group-hover:text-lime-400 group-hover:translate-x-0.5 transition-all shrink-0" strokeWidth={2.4} />
+                    </Card>
+                  </a>
+                ) : (
+                  <Link to={link.href} className="block group w-full">
+                    <Card
+                      className="hover:border-lime-400 hover:bg-slate-800/80 transition-all cursor-pointer w-full bg-slate-900 border border-slate-800/80 rounded-2xl flex flex-row items-center justify-start text-left p-4 gap-4 overflow-hidden"
+                    >
+                      <div className="p-3 bg-lime-500/10 rounded-xl text-lime-400 flex-shrink-0">
+                        <Icon className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={2} />
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1 text-left">
+                        <h2 className="font-bold text-base text-white leading-tight group-hover:text-lime-300 transition-colors">
+                          {link.title}
+                        </h2>
+                        <p className="text-xs text-slate-400 leading-snug line-clamp-2">
+                          {link.subtitle}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4.5 h-4.5 text-slate-500 group-hover:text-lime-400 group-hover:translate-x-0.5 transition-all shrink-0" strokeWidth={2.4} />
+                    </Card>
+                  </Link>
+                )}
               </motion.li>
             );
           })}

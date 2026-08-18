@@ -1,0 +1,9 @@
+# SPA fallback + rotas amigáveis
+# Qualquer rota serve o index.html (React Router domina as rotas internamente)
+/*    /index.html   200
+
+# Rotas curtas para o LinkBio (alias permanentes)
+/bio       /linkbio     301
+/links     /linkbio     301
+/link      /linkbio     301
+/linktree  /linkbio     301
