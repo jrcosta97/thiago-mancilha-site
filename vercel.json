@@ -9,9 +9,15 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/((?!assets/|assets/[^/]+|images/|favicon.ico|robots.txt|sitemap.xml|[^/]+\\.[^/]+$).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
+  ],
+  "redirects": [
+    { "source": "/bio",      "destination": "/linkbio", "statusCode": 301 },
+    { "source": "/links",    "destination": "/linkbio", "statusCode": 301 },
+    { "source": "/link",     "destination": "/linkbio", "statusCode": 301 },
+    { "source": "/linktree", "destination": "/linkbio", "statusCode": 301 }
   ],
   "headers": [
     {
