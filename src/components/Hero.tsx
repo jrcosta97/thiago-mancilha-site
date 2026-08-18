@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, CheckCircle2, HeartPulse, MessageCircle, Users } from 'lucide-react';
+import { ArrowRight, Sparkles, CheckCircle2, MessageCircle, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BlurText } from '@/components/ui/BlurText';
+import { BorderBeam } from '@/components/ui/BorderBeam';
 
 const WHATSAPP_NUMBER = '5548988720439';
 
@@ -36,8 +38,14 @@ export default function Hero({ onCTAClick }: HeroProps) {
               transition={{ delay: 0.15 }}
               className="badge-chip w-fit"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              O BÁSICO QUE FUNCIONA
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <BlurText
+                text="O BÁSICO QUE FUNCIONA"
+                delay={0.05}
+                animateBy="words"
+                stagger={0.08}
+                className="text-[0.72rem] font-extrabold tracking-[0.14em] uppercase text-[#CCFF00]"
+              />
             </motion.div>
 
             <motion.h1
@@ -68,26 +76,38 @@ export default function Hero({ onCTAClick }: HeroProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.45 }}
-              className="flex flex-col sm:flex-row gap-4 pt-2"
+              className="flex flex-col gap-4 pt-2 lg:flex-row lg:flex-wrap lg:items-stretch"
             >
               <a
                 href={whatsappLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group/button inline-flex shrink-0 items-center justify-center gap-2.5 !h-14 !rounded-xl !px-7 !text-base !font-bold !bg-lime-500 hover:!bg-lime-400 !text-black !shadow-[0_0_25px_rgba(132,204,22,0.3)] hover:!shadow-[0_0_40px_rgba(132,204,22,0.45)] !transition-all border border-transparent bg-clip-padding whitespace-nowrap outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0"
+                className="group/button w-full inline-flex lg:w-auto shrink-0 items-center justify-center gap-2.5 !h-14 !rounded-xl !px-7 !text-base !font-bold !bg-lime-500 hover:!bg-lime-400 !text-black !shadow-[0_0_25px_rgba(132,204,22,0.3)] hover:!shadow-[0_0_40px_rgba(132,204,22,0.45)] !transition-all border border-transparent bg-clip-padding whitespace-nowrap outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0"
               >
                 <MessageCircle className="w-5 h-5 shrink-0" strokeWidth={2.5} fill="currentColor" />
                 Falar com o Thiago no WhatsApp
                 <ArrowRight className="w-5 h-5 shrink-0 group-hover:translate-x-1 transition-transform" strokeWidth={2.5} />
               </a>
-              <Button
-                onClick={() => document.querySelector('#servicos')?.scrollIntoView({ behavior: 'smooth' })}
-                size="lg"
-                className="!h-14 !rounded-xl !px-7 !text-base !font-bold !border-slate-700 !bg-slate-900/50 hover:!bg-slate-800 !text-slate-200 !backdrop-blur-md"
-                variant="outline"
+              <BorderBeam
+                size={220}
+                duration={5.5}
+                delay={0.2}
+                borderRadius={12}
+                borderWidth={1.8}
+                colorFrom="#bef264"
+                colorTo="#a3e635"
+                containerClassName="w-full lg:w-auto lg:shrink-0"
               >
-                Ver Planos
-              </Button>
+                <Button
+                  onClick={onCTAClick}
+                  size="lg"
+                  className="!h-14 !rounded-xl !px-7 !text-base !font-bold !border !border-slate-700 hover:!border-lime-400 !bg-slate-900/50 hover:!bg-slate-900/70 !text-slate-200 hover:!text-lime-400 !backdrop-blur-md !shadow-none !transition-all !duration-300 !ease-out !active:translate-y-px !focus-visible:outline-none !focus-visible:ring-2 !focus-visible:ring-lime-400 !focus-visible:ring-offset-2 !focus-visible:ring-offset-[#0B0F17] w-full lg:w-auto whitespace-nowrap"
+                  variant="outline"
+                >
+                  <Calendar className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                  Agendar Avaliação Gratuita
+                </Button>
+              </BorderBeam>
             </motion.div>
 
             <motion.div
@@ -144,53 +164,6 @@ export default function Hero({ onCTAClick }: HeroProps) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background/85 via-background/30 to-transparent rounded-[2rem]" />
             </div>
-
-            <motion.div
-              animate={{ y: [-8, 8, -8] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -left-3 sm:-left-5 top-14 sm:top-16 backdrop-blur-md bg-black/60 border border-white/10 rounded-2xl p-3 sm:p-4 shadow-[0_10px_40px_rgba(0,0,0,0.4)]"
-            >
-              <div className="flex items-center gap-3 sm:gap-3.5">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-lime-500/15 flex items-center justify-center text-lime-400 border border-lime-500/20">
-                  <HeartPulse className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wide">Foco em</p>
-                  <p className="font-display font-bold text-slate-100 text-sm sm:text-lg leading-tight">
-                    Saúde Funcional
-                    <span className="block text-[11px] sm:text-xs text-lime-400 font-medium tracking-wide mt-0.5">
-                      & Longevidade
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              animate={{ y: [8, -8, 8] }}
-              transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-              className="absolute -right-2 sm:-right-4 bottom-8 sm:bottom-10 backdrop-blur-md bg-black/60 border border-white/10 rounded-2xl p-3 sm:p-4 shadow-[0_10px_40px_rgba(0,0,0,0.4)] hidden sm:block"
-            >
-              <div className="flex items-center gap-3 sm:gap-3.5">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-lime-400 to-emerald-500 border-2 border-black/70 flex items-center justify-center text-[10px] sm:text-[11px] font-bold text-black"
-                    >
-                      {String.fromCharCode(64 + i)}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-start gap-2">
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wide">+50 Alunos</p>
-                    <p className="font-display font-bold text-lime-400 text-sm sm:text-base">Transformados</p>
-                  </div>
-                  <Users className="w-4 h-4 text-slate-500 shrink-0 mt-0.5 hidden sm:block" />
-                </div>
-              </div>
-            </motion.div>
           </motion.div>
         </div>
       </div>

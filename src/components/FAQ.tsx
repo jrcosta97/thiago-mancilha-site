@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { HelpCircle, MessageCircle } from 'lucide-react';
+import { MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Accordion,
   AccordionItem,
@@ -8,12 +8,29 @@ import {
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 const WHATSAPP_NUMBER = '5548988720439';
 
 interface FAQProps {
   onCTAClick: () => void;
 }
+
+const cleanQuestion = (question: string) =>
+  question
+    .replace(/^Treino na Maturidade 50\+\s+—\s+/, '')
+    .replace(/^Acompanhamento para quem usa Mounjaro\/Ozempic\s+—\s+/, '')
+    .replace(/^Mitos da Musculação\s+—\s+/, '');
+
+const getQuestionBadge = (question: string) => {
+  if (/50\+|idos[ae]|maturidade/i.test(question)) {
+    return { label: '50+', show: true };
+  }
+  if (/mounjaro|ozempic|semaglutida|medica(ç|c)(õ|o)es?/i.test(question)) {
+    return { label: 'Mounjaro / Ozempic', show: true };
+  }
+  return { label: '', show: false };
+};
 
 const faqs = [
   {
@@ -79,23 +96,19 @@ export default function FAQ({ onCTAClick }: FAQProps) {
   const whatsappLink = `https://api.whatsapp.com/send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${whatsappMsg}`;
 
   return (
-    <section id="faq" className="py-24 md:py-32 relative">
+    <section id="faq" className="py-12 relative">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center max-w-2xl mx-auto mb-16 space-y-5"
+          className="text-center max-w-2xl mx-auto mb-8 space-y-2"
         >
-          <span className="badge-chip mx-auto">
-            <HelpCircle className="w-3.5 h-3.5" />
-            PERGUNTAS FREQUENTES
-          </span>
-          <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-text-primary tracking-tight leading-tight">
-            Tire suas <span className="text-gradient">dúvidas</span> antes de começar
+          <h2 className="text-2xl md:text-3xl font-bold text-text-primary tracking-tight">
+            Tire suas dúvidas antes de começar
           </h2>
-          <p className="text-text-secondary text-lg leading-relaxed">
-            Respondemos as perguntas mais comuns recebidas diariamente — incluindo atendimento a público maduro e uso de medicações como o Mounjaro. Se não encontrar sua resposta, é só falar com a gente no WhatsApp.
+          <p className="text-sm md:text-base text-slate-400">
+            Respostas diretas para as dúvidas mais comuns antes de iniciar.
           </p>
         </motion.div>
 
@@ -104,53 +117,55 @@ export default function FAQ({ onCTAClick }: FAQProps) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <Card className="!rounded-3xl bg-card !p-2 sm:!p-3 border-white/6 shadow-card">
-            <div className="w-full">
-              <Accordion
-                defaultValue={[`faqs-item-0`]}
-                className="w-full gap-0"
-              >
-                {faqs.map((faq, i) => (
-                  <div
-                    key={`wrap-${i}`}
-                    className={`${i !== faqs.length - 1 ? 'border-b border-white/8' : ''} first:rounded-t-2xl last:rounded-b-2xl`}
+          <Card className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 md:p-8 backdrop-blur-sm max-w-2xl mx-auto w-full mb-10">
+            <Accordion
+              defaultValue={['faqs-item-0']}
+              className="w-full"
+            >
+              {faqs.map((faq, i) => {
+                const miniBadge = getQuestionBadge(faq.q);
+                return (
+                  <AccordionItem
+                    key={`faq-${i}`}
+                    value={`faqs-item-${i}`}
+                    className={`border-b border-slate-800/60 ${
+                      i === faqs.length - 1 ? 'last:border-0' : ''
+                    }`}
                   >
-                    <AccordionItem
-                      value={`faqs-item-${i}`}
+                    <AccordionTrigger
+                      className="group/accordion-trigger relative hover:!no-underline hover:!bg-transparent !rounded-none !px-0 !py-0 [&_[data-slot=accordion-trigger-icon]]:!hidden **:data-[slot=accordion-trigger-icon]:!hidden"
                     >
-                      <div className="px-2 sm:px-5 py-1 sm:py-2">
-                        <AccordionTrigger className="!py-4 sm:!py-5 flex items-start gap-3 sm:gap-5 !rounded-xl hover:!no-underline hover:!bg-white/[0.03] !transition-all !text-left">
-                          <div className="flex items-center justify-between flex-1 min-w-0 gap-4">
-                            <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-                              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0 mt-0.5">
-                                <span className="font-display font-bold text-sm">{String(i + 1).padStart(2, '0')}</span>
-                              </div>
-                              <div className="flex flex-col items-start gap-2 min-w-0">
-                                {faq.tag && (
-                                  <Badge className={`h-5 px-2.5 text-[10px] font-bold uppercase tracking-wide border ${faq.tagColor}`}>
-                                    {faq.tag}
-                                  </Badge>
-                                )}
-                                <h3 className="font-display font-bold !text-base sm:!text-lg leading-snug text-foreground pr-2 data-open:text-accent">
-                                  {faq.q}
-                                </h3>
-                              </div>
-                            </div>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="!pb-6 sm:!pb-7 pl-0 sm:pl-2">
-                          <div className="pl-12 sm:pl-[4.5rem] pr-2 sm:pr-4">
-                            <p className="text-sm sm:text-base leading-relaxed text-muted-foreground">
-                              {faq.a}
-                            </p>
-                          </div>
-                        </AccordionContent>
+                      <div className="flex items-center justify-between gap-4 text-left font-semibold text-slate-100 hover:text-lime-400 py-4 transition-all w-full aria-expanded:text-lime-400">
+                        <div className="flex items-center flex-1 min-w-0 gap-0">
+                          <span className="leading-snug min-w-0 text-base">
+                            {cleanQuestion(faq.q)}
+                          </span>
+                          {miniBadge.show && (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                'text-[10px] text-lime-400 border-lime-500/30 bg-lime-500/10 shrink-0 ml-2 h-5 px-2 tracking-wide font-bold uppercase'
+                              )}
+                            >
+                              {miniBadge.label}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="shrink-0 flex items-center justify-center w-7 h-7 rounded-full bg-lime-400/10 border border-lime-500/20 text-lime-400 group-aria-expanded/accordion-trigger:bg-lime-400 group-aria-expanded/accordion-trigger:text-black group-aria-expanded/accordion-trigger:border-lime-400 transition-all">
+                          <ChevronDown className="w-4 h-4 shrink-0 group-aria-expanded/accordion-trigger:hidden transition-transform" />
+                          <ChevronUp className="w-4 h-4 shrink-0 hidden group-aria-expanded/accordion-trigger:inline-flex transition-transform" />
+                        </div>
                       </div>
-                    </AccordionItem>
-                  </div>
-                ))}
-              </Accordion>
-            </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="!pt-0 !pb-5 pl-0 pr-1">
+                      <div className="bg-slate-950/40 p-4 rounded-xl mt-1 text-slate-300 text-sm leading-relaxed border border-slate-800/40">
+                        {faq.a}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
           </Card>
         </motion.div>
 

@@ -109,6 +109,16 @@ body {
   }
   .btn-primary:active { transform: translateY(0); }
 
+  /* -------------------------------------------------------------------------- */
+  /*  Glassmorphism — fallback @supports not (backdrop-filter: blur)           */
+  /* -------------------------------------------------------------------------- */
+  @supports not ((backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))) {
+    .glass-effect,
+    .glass-effect * {
+      background-color: rgba(15, 23, 42, 0.95) !important;
+    }
+  }
+
   .btn-secondary {
     display: inline-flex;
     align-items: center;

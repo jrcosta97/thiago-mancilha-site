@@ -69,7 +69,11 @@ export default function About() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.25 }}
-              className="absolute -bottom-6 left-4 sm:left-8 right-4 sm:right-auto card-dark !bg-background p-5 shadow-neon sm:max-w-sm"
+              className="absolute -bottom-6 left-4 sm:left-8 right-4 sm:right-auto p-5 rounded-2xl sm:max-w-sm shadow-neon glass-effect bg-slate-900/60 backdrop-blur-md border border-slate-800 hover:border-lime-500/30 transition-all duration-300 ease-out"
+              style={{
+                WebkitBackdropFilter: 'blur(12px)',
+                backgroundColor: 'rgba(15, 23, 42, 0.6)',
+              }}
             >
               <div className="flex items-center gap-3 mb-3">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[11px] font-bold uppercase tracking-widest">
@@ -99,7 +103,9 @@ export default function About() {
             </span>
 
             <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-text-primary leading-tight tracking-tight">
-              Olá, eu sou <span className="text-gradient">Thiago Mancilha Reis</span>
+              <span className="text-white">Olá, eu sou</span>{' '}
+              <span className="text-accent">Thiago Mancilha</span>{' '}
+              <span className="text-text-primary">Reis</span>
             </h2>
             <p className="text-text-primary font-bold text-base sm:text-lg">
               Educação Física · Bacharel e Licenciado (UniNorte) · CREF 008289-G/AM
@@ -134,7 +140,10 @@ export default function About() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: 0.06 * i }}
-                      className="card-dark !bg-background-card/70 p-4 sm:p-5 flex gap-4 border-white/5 hover:border-accent/25 transition-all group"
+                      className="p-4 sm:p-5 flex gap-4 rounded-2xl glass-effect bg-slate-900/60 backdrop-blur-md border border-slate-800 hover:border-lime-500/30 transition-all duration-300 ease-out group"
+                      style={{
+                        WebkitBackdropFilter: 'blur(12px)',
+                      }}
                     >
                       <div className="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center text-accent shrink-0 group-hover:scale-110 transition-transform">
                         <h.icon className="w-5 h-5" strokeWidth={2} />

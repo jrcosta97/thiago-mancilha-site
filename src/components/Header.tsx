@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Calendar, Dumbbell, Award } from 'lucide-react';
+import { BorderBeam } from '@/components/ui/BorderBeam';
 
 interface HeaderProps {
   onCTAClick: () => void;
@@ -69,9 +70,11 @@ export default function Header({ onCTAClick }: HeaderProps) {
         <div className="hidden md:block">
           <button
             onClick={onCTAClick}
-            className="btn-primary !py-2.5 !px-5 sm:!px-6 text-sm whitespace-nowrap"
+            type="button"
+            aria-label="Agendar Avaliação Gratuita"
+            className="h-10 sm:h-11 px-5 sm:px-6 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-transparent text-slate-200 hover:border-lime-400 hover:text-lime-400 text-sm font-extrabold whitespace-nowrap transition-all duration-300 ease-out active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F17]"
           >
-            <Calendar className="w-4 h-4" strokeWidth={2.5} />
+            <Calendar className="w-4 h-4" strokeWidth={2.4} />
             Agendar Avaliação Gratuita
           </button>
         </div>
@@ -104,13 +107,15 @@ export default function Header({ onCTAClick }: HeaderProps) {
                 </button>
               ))}
               <div className="pt-3 px-1">
-                <button
-                  onClick={() => { setMobileOpen(false); onCTAClick(); }}
-                  className="btn-primary w-full !py-3 text-sm"
-                >
-                  <Calendar className="w-4 h-4" strokeWidth={2.5} />
-                  Agendar Avaliação Gratuita
-                </button>
+                  <button
+                    onClick={() => { setMobileOpen(false); onCTAClick(); }}
+                    type="button"
+                    aria-label="Agendar Avaliação Gratuita"
+                    className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/40 text-slate-200 hover:border-lime-400 hover:text-lime-400 hover:bg-slate-900/60 text-sm font-extrabold transition-all duration-300 ease-out active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F17]"
+                  >
+                    <Calendar className="w-4 h-4" strokeWidth={2.4} />
+                    Agendar Avaliação Gratuita
+                  </button>
               </div>
             </div>
           </motion.div>
