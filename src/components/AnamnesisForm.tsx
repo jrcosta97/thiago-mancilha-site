@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Dumbbell, ClipboardList, CheckCircle2, ArrowRight, ArrowLeft, PartyPopper, MessageCircle,
   HeartPulse, ThumbsUp, CalendarDays, Sparkles, AlertTriangle, Shield, Target, Clock, Users,
-  FileSpreadsheet, Download,
+  FileSpreadsheet, Download, Database,
 } from 'lucide-react';
 import { useForm, type FieldValues, type Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,8 +18,18 @@ import {
   buildSheetCSV,
   downloadCSV,
   formatWhatsApp,
+  sheetSyncSelfTest,
   type SheetValidationReport,
 } from '@/services/sheet-sync';
+import {
+  isSupabaseConfigured,
+  getSupabase,
+  insertAluno,
+  formatSupabaseError,
+  insertAlunoViaEdgeFunction,
+  type AlunosRow,
+  type AlunoStatus,
+} from '@/lib/supabase';
 
 const WHATSAPP_NUMBER = '5548988720439';
 
@@ -252,6 +262,7 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
   const submit = async (data: FormValues) => {
     if (sending) return;
     setSending(true);
+    setStepError(null);
 
     const now = new Date();
     const preferenciaPretty = String(data.preferencia || '').trim();
@@ -304,15 +315,42 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
       (import.meta.env.VITE_GOOGLE_SCRIPT_URL as string | undefined) ||
       'https://script.google.com/macros/s/AKfycbzWebhookPlaceholder/exec';
 
+    // ----- Supabase payload -----
+    const idadeNumeric = Number.isFinite(Number(data.idade)) ? Number(data.idade) : NaN;
+    const hasInjuryBool = data.hasInjury === 's';
+    const supabasePayload = {
+      nome: String(data.nome ?? '').trim(),
+      idade: idadeNumeric,
+      whatsapp: String(data.whatsapp ?? '').trim(),
+      objetivo: String(data.goal ?? '').trim(),
+      goal_details: String(data.goalDetails ?? '').trim() || null,
+      frequency: String(data.frequency ?? '').trim(),
+      has_injury: hasInjuryBool,
+      injury_details: hasInjuryBool ? String(data.injuryDetails ?? '').trim() || null : null,
+      rotina: String(data.rotina ?? '').trim() || null,
+      preferencia: preferenciaPretty || null,
+      status: 'ACTIVE' as AlunoStatus,
+      origem: 'anamnese-site',
+      whatsapp_link: report.rowByLetter.I || undefined,
+    };
+
+    type ResultadoGAS = { ok: boolean; error?: unknown; response?: Response; url: string; body: string };
+    type ResultadoSUPA = { ok: boolean; configured: boolean; error?: unknown; validationErrors?: string[]; inserted: AlunosRow | null };
+
+    let gasResult: ResultadoGAS = { ok: false, url: WEBHOOK, body: bodyUrlEncoded };
+    let supaResult: ResultadoSUPA = { ok: false, configured: isSupabaseConfigured(), inserted: null };
+
     try {
-      console.group('%c[Anamnesis] Envio para Google Apps Script', 'color:#CCFF00;font-weight:bold;');
+      console.group('%c[Anamnesis] Envio para Google Apps Script + Supabase (Promise.all paralelo)', 'color:#CCFF00;font-weight:bold;');
       console.log('➡️ URL do Webhook:', WEBHOOK);
+      console.log('➡️ Supabase configurado?', isSupabaseConfigured() ? 'SIM (tentando insert alunos)' : 'NÃO (pulando insert)');
       console.log('➡️ MÓDULO: sheet-sync.ts v2 buildSheetRow + buildUniversalPayload');
       console.log('➡️ MÉTODO DE ENVIO: application/x-www-form-urlencoded (URLSearchParams, compatível com e.parameter do GAS)');
       console.log('➡️ Relatório buildSheetRow (9 células em ORDEM A..I):', report);
       console.log('➡️ Payload UNIVERSAL (todas as chaves 5 formatos):', universalPayload);
+      console.log('➡️ Payload SUPABASE tabela alunos (mapeamento exato):', supabasePayload);
       console.log('➡️ Query string URLSearchParams.toString() — cole aqui em caso de dúvida:\n', bodyUrlEncoded);
-      console.log('➡️ Headers:', { method: 'POST', mode: 'no-cors', 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' });
+      console.log('➡️ Headers GAS:', { method: 'POST', mode: 'no-cors', 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' });
 
       console.groupCollapsed('%c[Anamnesis] Relatório INTEGRIDADE célula a célula (sheet-sync)', 'color:#8b5cf6;font-weight:bold;');
       console.table(reportToTableRows(report));
@@ -352,36 +390,124 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
         tem_lesao: universalPayload['tem_lesao'],
       });
 
-      const response = await fetch(WEBHOOK, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-          'X-Sent-With': 'AnamnesisForm-v3-sheet-sync-service',
-        },
-        body: bodyUrlEncoded,
-      });
+      // ---- CHAMADAS PARALELAS (Promise.allSettled p/ ambas prosseguir mesmo se uma falhar) ----
+      const chamadas: Promise<ResultadoGAS | ResultadoSUPA>[] = [];
 
-      console.log('✅ Resposta recebida (no-cors - body é opaco):', response);
-      console.log('   · status / type / ok:', {
-        status: response.status,
-        type: response.type,
-        ok: response.ok,
-        redirected: response.redirected,
-        url: response.url,
-        headers: Object.fromEntries([...response.headers.entries()]),
-      });
+      chamadas.push(
+        (async (): Promise<ResultadoGAS> => {
+          try {
+            const response = await fetch(WEBHOOK, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+                'X-Sent-With': 'AnamnesisForm-v3-sheet-sync-service',
+              },
+              body: bodyUrlEncoded,
+            });
+            console.log('✅ [GAS] Resposta recebida (no-cors - body é opaco):', {
+              status: response.status, type: response.type, ok: response.ok, redirected: response.redirected,
+            });
+            return { ok: true, response, url: WEBHOOK, body: bodyUrlEncoded };
+          } catch (err) {
+            console.group('%c[Anamnesis] ❌ Erro durante envio Google Apps Script', 'color:#ef4444;font-weight:bold;');
+            console.error('Detalhes do erro GAS:', err);
+            console.log('URL usada:', WEBHOOK);
+            console.log('Body URLSearchParams enviado:', bodyUrlEncoded);
+            console.groupEnd();
+            return { ok: false, error: err, url: WEBHOOK, body: bodyUrlEncoded };
+          }
+        })()
+      );
+
+      chamadas.push(
+        (async (): Promise<ResultadoSUPA> => {
+          if (!isSupabaseConfigured()) {
+            console.warn('%c[SUPABASE] Pulado: VITE_SUPABASE_URL e/ou VITE_SUPABASE_ANON_KEY ausentes.', 'color:#f59e0b;font-weight:bold;');
+            return { ok: false, configured: false, inserted: null };
+          }
+          try {
+            // ===================== FALLBACK OBRIGATÓRIO =====================
+            // O PostgREST desta máquina (/rest/v1/) está com bug de cache no
+            // Authentication URL Configuration: não carrega origins permitidas,
+            // então CORS ALWAYS FALHA. Resolução: usar Edge Function (server side)
+            // como método principal (zero CORS, bypass total).
+            // ================================================================
+            console.log('%c[SUPABASE] ▶️ Usando Edge Function (bypass CORS garantido):', 'color:#6d28d9;font-weight:bold;', 'insert-aluno');
+            const edgeResult = await insertAlunoViaEdgeFunction(supabasePayload);
+
+            if (edgeResult.validationErrors && edgeResult.validationErrors.length > 0) {
+              console.group('%c[SUPABASE] ⚠️ Validação antes do insert (Edge Function) falhou', 'color:#f59e0b;font-weight:bold;');
+              edgeResult.validationErrors.forEach((e) => console.warn('  -', e));
+              console.groupEnd();
+              return { ok: false, configured: true, validationErrors: edgeResult.validationErrors, inserted: null };
+            }
+            if (!edgeResult.ok || edgeResult.error) {
+              const errObj = edgeResult.error;
+              const fmtMessage =
+                errObj && typeof errObj === 'object' && 'message' in errObj
+                  ? (errObj as { message: string }).message
+                  : 'Erro desconhecido na Edge Function';
+              console.group('%c[Anamnesis] ❌ Erro durante insert Supabase (Edge Function)', 'color:#ef4444;font-weight:bold;');
+              console.error('Mensagem:', fmtMessage);
+              console.error('Erro completo:', errObj);
+              console.groupEnd();
+              return { ok: false, configured: true, error: fmtMessage, inserted: null };
+            }
+            console.log('%c[SUPABASE] ✅ aluno inserido com SUCESSO (via Edge Function):', 'color:#22c55e;font-weight:bold;', edgeResult.data);
+            return { ok: true, configured: true, inserted: (edgeResult.data ?? null) as AlunosRow | null };
+          } catch (err) {
+            const fmt = formatSupabaseError(err, 'Supabase insert alunos catch');
+            console.group('%c[Anamnesis] ❌ Erro inesperado (catch) durante insert Supabase (Edge Function)', 'color:#ef4444;font-weight:bold;');
+            console.error(fmt.message);
+            console.error('Erro completo:', err);
+            console.groupEnd();
+            return { ok: false, configured: true, error: err, inserted: null };
+          }
+        })()
+      );
+
+      const resultados = await Promise.allSettled(chamadas);
+      const resultadoGasRaw = resultados[0];
+      const resultadoSupaRaw = resultados[1];
+
+      gasResult = resultadoGasRaw.status === 'fulfilled'
+        ? (resultadoGasRaw.value as ResultadoGAS)
+        : { ok: false, error: resultadoGasRaw.status === 'rejected' ? resultadoGasRaw.reason : 'promise rejeitada', url: WEBHOOK, body: bodyUrlEncoded };
+
+      supaResult = resultadoSupaRaw.status === 'fulfilled'
+        ? (resultadoSupaRaw.value as ResultadoSUPA)
+        : { ok: false, configured: isSupabaseConfigured(), error: resultadoSupaRaw.status === 'rejected' ? resultadoSupaRaw.reason : 'promise rejeitada', inserted: null };
+
+      console.group('%c[Anamnesis] RESUMO das chamadas paralelas (Promise.allSettled):', 'color:#22c55e;font-weight:bold;');
+      console.log('Google Apps Script:', gasResult.ok ? '✅ SUCESSO' : '❌ FALHA', gasResult);
+      console.log('Supabase:', supaResult.ok ? '✅ SUCESSO' : (supaResult.configured ? '❌ FALHA' : '⏭️  NÃO CONFIGURADO (pulado)'), supaResult);
+      console.groupEnd();
       console.groupEnd();
     } catch (err) {
-      console.group('%c[Anamnesis] ❌ Erro durante envio', 'color:#ef4444;font-weight:bold;');
-      console.error('Detalhes do erro:', err);
-      console.log('URL usada:', WEBHOOK);
-      console.log('Body URLSearchParams enviado:', bodyUrlEncoded);
-      console.log('Payload universal (fallback para debug):', universalPayload);
-      console.log('Relatório de validação:', report);
+      console.group('%c[Anamnesis] ❌ Erro GLOBAL durante envio (catch externo)', 'color:#ef4444;font-weight:bold;');
+      console.error('Detalhes do erro global:', err);
       console.groupEnd();
+      setStepError('Não foi possível enviar sua ficha agora. Tente novamente em alguns segundos ou entre em contato pelo WhatsApp.');
+      setSending(false);
+      setLastReport(report);
+      return;
     }
-    setSuccess(true);
+
+    const ambasFalharam =
+      !gasResult.ok &&
+      supaResult.configured === true && !supaResult.ok;
+
+    const aoMenosUmaFuncionou = gasResult.ok || supaResult.ok || (!supaResult.configured && gasResult.ok);
+
+    if (ambasFalharam) {
+      setStepError('Não foi possível salvar sua ficha no momento. Clique no ícone de WhatsApp abaixo e envie seus dados diretamente para o Thiago.');
+    }
+    if (!aoMenosUmaFuncionou && !ambasFalharam) {
+      setStepError('Não foi possível enviar sua ficha. Confira sua conexão ou use o botão de WhatsApp para contato direto.');
+    }
+
+    setSuccess(aoMenosUmaFuncionou || !ambasFalharam ? true : success);
     setSending(false);
     setLastReport(report);
   };
