@@ -280,7 +280,7 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
         preferencia: preferenciaPretty,
         rotina: data.rotina,
       },
-      { now, statusLead: 'Novo Lead', allowFallbackDefaults: true }
+      { now, statusLead: 'NOVO_LEAD', allowFallbackDefaults: true }
     );
 
     const universalPayload = buildUniversalPayload(report);
@@ -329,7 +329,7 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
       injury_details: hasInjuryBool ? String(data.injuryDetails ?? '').trim() || null : null,
       rotina: String(data.rotina ?? '').trim() || null,
       preferencia: preferenciaPretty || null,
-      status: 'ACTIVE' as AlunoStatus,
+      status: 'NOVO_LEAD' as AlunoStatus,
       origem: 'anamnese-site',
       whatsapp_link: report.rowByLetter.I || undefined,
     };

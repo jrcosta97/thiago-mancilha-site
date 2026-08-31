@@ -9,7 +9,7 @@ import { serve } from 'https://deno.land/std@0.192.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3'
 
 // Tipos locais (copiados do front para compatibilidade)
-type AlunoStatus = 'ACTIVE' | 'ARCHIVED' | 'CONTACTED' | 'CONVERTED'
+type AlunoStatus = 'NOVO_LEAD' | 'EM_NEGOCIACAO' | 'ATIVO' | 'INATIVO' | 'PERDIDO'
 
 interface CreateAlunoPayload {
   nome: string
@@ -132,7 +132,7 @@ serve(async (req) => {
     const rotina = String(raw.rotina ?? '').trim() || null
     const preferencia = String(raw.preferencia ?? '').trim() || null
     const origem = String(raw.origem ?? '').trim() || 'anamnese-site-edge'
-    const status: AlunoStatus = (raw.status as AlunoStatus | undefined) || 'ACTIVE'
+    const status: AlunoStatus = (raw.status as AlunoStatus | undefined) || 'NOVO_LEAD'
     const whatsapp_link =
       String(raw.whatsapp_link ?? '').trim() || buildWhatsAppLinkBR(raw.whatsapp) || null
 

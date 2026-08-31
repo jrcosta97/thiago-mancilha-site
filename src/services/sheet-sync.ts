@@ -13,7 +13,7 @@
 //   E  Objetivo              Categórico     Emagrecimento / Massa / etc.
 //   F  Frequencia            Categórico     1 a 2 / 3 a 4 / 5 a 6 vezes semana
 //   G  lesões                Texto/flag     "Não"  OU  "Sim — <detalhes>"
-//   H  status                Categórico     "Novo Lead" (fixo)
+//   H  status                Categórico     "NOVO_LEAD" (fixo)
 //   I  link wpp              URL            https://api.whatsapp.com/...
 // =============================================================================
 
@@ -43,7 +43,7 @@ export const SHEET_COLUMNS: Record<SheetColumnLetter, SheetColumnDef> = {
   E: { index: 4, letter: 'E', header: 'Objetivo',             category: 'objetivo',      example: 'Emagrecimento',        required: true,  defaultValue: 'Não informado' },
   F: { index: 5, letter: 'F', header: 'Frequencia',           category: 'objetivo',      example: '3 a 4 vezes por semana', required: true, defaultValue: 'Não informado' },
   G: { index: 6, letter: 'G', header: 'lesões',               category: 'saude',         example: 'Não',                  required: true,  defaultValue: 'Não' },
-  H: { index: 7, letter: 'H', header: 'status',               category: 'admin',         example: 'Novo Lead',            required: true,  defaultValue: 'Novo Lead' },
+  H: { index: 7, letter: 'H', header: 'status',               category: 'admin',         example: 'NOVO_LEAD',            required: true,  defaultValue: 'NOVO_LEAD' },
   I: { index: 8, letter: 'I', header: 'link wpp',             category: 'admin',         example: 'https://api.whatsapp.com/send?phone=55489...', required: false, defaultValue: '' },
 };
 
@@ -280,7 +280,7 @@ export const buildSheetRow = (
   opts: BuildRowOptions = {},
 ): SheetValidationReport => {
   const now = opts.now ?? new Date();
-  const statusLead = opts.statusLead ?? 'Novo Lead';
+  const statusLead = opts.statusLead ?? 'NOVO_LEAD';
   const allowFallback = opts.allowFallbackDefaults !== false;
 
   // Formatação forte por célula

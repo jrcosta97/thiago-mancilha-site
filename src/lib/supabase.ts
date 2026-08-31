@@ -4,18 +4,20 @@ import { createClient, type SupabaseClient, type PostgrestError } from '@supabas
 // Tipos da tabela `alunos` (supabase schema public)
 // -----------------------------------------------------------------------------
 
-export type AlunoStatus = 'ACTIVE' | 'ARCHIVED' | 'CONTACTED' | 'CONVERTED';
+export type AlunoStatus = 'NOVO_LEAD' | 'EM_NEGOCIACAO' | 'ATIVO' | 'INATIVO' | 'PERDIDO';
+export type AgendamentoStatus = 'AGENDADO' | 'CONCLUIDO' | 'FALTOU' | 'CANCELADO';
+export type FaturaStatus = 'PAGO' | 'PENDENTE';
 
 export interface AlunosRow {
   id: string;
   created_at: string;
   updated_at: string;
   nome: string;
-  idade: number;
+  idade: number | null;
   whatsapp: string;
-  objetivo: string;
+  objetivo: string | null;
   goal_details: string | null;
-  frequency: string;
+  frequency: string | null;
   has_injury: boolean;
   injury_details: string | null;
   rotina: string | null;
@@ -24,6 +26,33 @@ export interface AlunosRow {
   origem: string | null;
   sheet_sync_at: string | null;
   whatsapp_link: string | null;
+  mensalidade: number | null;
+  dia_vencimento: number | null;
+  ultimo_pagamento_data: string | null;
+}
+
+export interface AgendamentosRow {
+  id: string;
+  aluno_id: string;
+  data_hora: string;
+  dia_semana: number;
+  status: AgendamentoStatus;
+  observacoes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FaturasRow {
+  id: string;
+  aluno_id: string;
+  mes_referencia: string;
+  valor: number;
+  data_vencimento: string | null;
+  data_pagamento: string | null;
+  status: FaturaStatus;
+  observacao: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export type AlunosInsert = Omit<AlunosRow, 'id' | 'created_at' | 'updated_at' | 'sheet_sync_at'> & {
@@ -37,6 +66,16 @@ export interface Database {
         Row: AlunosRow;
         Insert: AlunosInsert;
         Update: Partial<AlunosInsert>;
+      };
+      agendamentos: {
+        Row: AgendamentosRow;
+        Insert: Omit<AgendamentosRow, 'id' | 'created_at' | 'updated_at' | 'dia_semana'> & { dia_semana?: number };
+        Update: Partial<Omit<AgendamentosRow, 'id' | 'created_at' | 'updated_at' | 'dia_semana'>>;
+      };
+      faturas: {
+        Row: FaturasRow;
+        Insert: Omit<FaturasRow, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<FaturasRow, 'id' | 'created_at' | 'updated_at'>>;
       };
     };
     Views: Record<string, never>;
@@ -187,6 +226,8 @@ export interface CreateAlunoPayload {
   status?: AlunoStatus;
   origem?: string | null;
   whatsapp_link?: string | null;
+  mensalidade?: number | null;
+  dia_vencimento?: number | null;
 }
 
 const WHATSAPP_BR_REGEX = /^\(\d{2}\) \d{4,5}-\d{4}$/;
@@ -239,7 +280,23 @@ export const validateCreateAlunoPayload = (
   const origem = String(raw.origem ?? '').trim() || 'anamnese-site';
   const whatsapp_link =
     String(raw.whatsapp_link ?? '').trim() || buildWhatsAppLinkBR(raw.whatsapp) || null;
-  const status: AlunoStatus = (raw.status as AlunoStatus | undefined) || 'ACTIVE';
+  const status: AlunoStatus = (raw.status as AlunoStatus | undefined) || 'NOVO_LEAD';
+  const mensalidade = raw.mensalidade == null
+    ? null
+    : Number(raw.mensalidade);
+  const dia_vencimento = raw.dia_vencimento == null
+    ? null
+    : Number(raw.dia_vencimento);
+
+  if (mensalidade !== null && (!Number.isFinite(mensalidade) || mensalidade < 0)) {
+    errors.push(`mensalidade: inválida "${String(raw.mensalidade)}"`);
+  }
+  if (
+    dia_vencimento !== null &&
+    (!Number.isFinite(dia_vencimento) || !Number.isInteger(dia_vencimento) || dia_vencimento < 1 || dia_vencimento > 31)
+  ) {
+    errors.push(`dia_vencimento: inválido "${String(raw.dia_vencimento)}" (deve ser inteiro entre 1 e 31)`);
+  }
 
   const payload: AlunosInsert = {
     nome,
@@ -255,6 +312,9 @@ export const validateCreateAlunoPayload = (
     status,
     origem,
     whatsapp_link,
+    mensalidade,
+    dia_vencimento,
+    ultimo_pagamento_data: null,
   };
 
   return { valid: errors.length === 0, payload, errors };
