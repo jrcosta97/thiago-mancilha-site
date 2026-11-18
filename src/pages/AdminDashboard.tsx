@@ -43,6 +43,9 @@ import {
   type AgendamentoStatus,
 } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { useBrandTheme } from '@/lib/useBrandTheme';
+import { LogoMark } from '@/components/brand/Logo';
+import { Slashes } from '@/components/brand/SectionLabel';
 import { PIX_KEY } from '@/lib/contact';
 import { formatAgendaDateTime, toAgendaInstant } from '@/lib/agenda-dates';
 import { getStudentFinancialStatus, getMonthReference, type StudentFinancialStatus } from '@/lib/financial-rules';
@@ -331,6 +334,7 @@ const getQuickActionType = (aluno: AlunosRow): 'welcome' | 'charge' =>
   isLeadStatus(aluno.status) || aluno.permuta ? 'welcome' : 'charge';
 
 export default function AdminDashboard() {
+  useBrandTheme('admin');
   const navigate = useNavigate();
   const [state, setState] = useState<DashboardState>({
     rows: [],
@@ -700,10 +704,11 @@ export default function AdminDashboard() {
   };
 
   return (
-    <section className="min-h-screen w-full bg-background relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-44 left-1/2 -translate-x-1/2 w-[620px] h-[620px] bg-lime-400/10 rounded-full blur-[160px]" />
-        <div className="absolute top-1/3 right-0 w-[520px] h-[520px] bg-emerald-500/10 rounded-full blur-[160px]" />
+    <section className="min-h-screen w-full bg-brand-bg relative overflow-hidden">
+      <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-grid opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_70%)]" />
+        <div className="absolute -right-10 top-0 h-full w-24 bg-brand-blue/80 -skew-x-[18deg] origin-top hidden xl:block" />
+        <div className="absolute -left-24 top-0 w-[220px] h-[90px] bg-white/[0.04] -skew-x-[32deg] hidden lg:block" />
       </div>
 
       <div className="relative max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -711,7 +716,7 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-3">
             <Link
               to="/"
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-lime-400 transition-colors rounded-lg px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lime-400 ring-offset-background"
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-lime-400 transition-colors rounded-sm px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lime-400 ring-offset-background"
             >
               <ArrowLeft className="w-4 h-4" />
               Voltar ao site
@@ -720,7 +725,7 @@ export default function AdminDashboard() {
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <Button
               onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center gap-2 bg-lime-400 text-black hover:bg-lime-300 border border-lime-400/70"
+              className="inline-flex items-center gap-2 bg-brand-blue text-white hover:bg-brand-blue-hover border border-brand-blue"
             >
               <Plus className="w-4 h-4" />
               Cadastrar Aluno
@@ -741,7 +746,7 @@ export default function AdminDashboard() {
               variant="outline"
               onClick={() => loadDashboardData()}
               disabled={state.loading || !supabaseOk}
-              className="inline-flex items-center gap-2 border-slate-700 hover:border-lime-400 hover:text-lime-400 transition-all duration-300 focus-visible:ring-offset-2 focus-visible:ring-lime-400 ring-offset-background"
+              className="inline-flex items-center gap-2 border-white/20 hover:border-lime-400 hover:text-lime-400 transition-all duration-300 focus-visible:ring-offset-2 focus-visible:ring-lime-400 ring-offset-background"
             >
               <RefreshCcw className={cn('w-4 h-4', state.loading && 'animate-spin')} />
               Atualizar
@@ -750,7 +755,7 @@ export default function AdminDashboard() {
               variant="outline"
               onClick={exportCurrentToCSV}
               disabled={mainTab !== 'CRM' || currentRows.length === 0}
-              className="inline-flex items-center gap-2 border-slate-700 hover:border-lime-400 hover:text-lime-400 transition-all duration-300 focus-visible:ring-offset-2 focus-visible:ring-lime-400 ring-offset-background"
+              className="inline-flex items-center gap-2 border-white/20 hover:border-lime-400 hover:text-lime-400 transition-all duration-300 focus-visible:ring-offset-2 focus-visible:ring-lime-400 ring-offset-background"
             >
               <Download className="w-4 h-4" />
               Exportar CSV
@@ -767,8 +772,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="lg:grid lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-7">
-        <nav aria-label="Áreas do painel" className="mb-5 flex flex-wrap content-start gap-2 lg:mb-0 lg:flex-col">
+        <div className="lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-10">
+        <nav aria-label="Áreas do painel" className="mb-5 flex flex-wrap content-start gap-2 lg:mb-0 lg:flex-col lg:sticky lg:top-8 lg:self-start lg:min-h-[calc(100vh-9rem)]">
           {([
             { key: 'CRM', label: 'Alunos e leads' },
             { key: 'FINANCEIRO', label: 'Financeiro' },
@@ -784,24 +789,30 @@ export default function AdminDashboard() {
                   setState((s) => ({ ...s, searchTerm: '', page: 1 }));
                 }}
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all',
+                  'inline-flex items-center gap-2 border px-4 py-2.5 text-[1.05rem] transition-colors',
                   active
-                    ? 'border-lime-400/60 bg-lime-400/10 text-lime-300'
-                    : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-lime-400/40 hover:text-lime-300'
+                    ? 'border-brand-blue bg-brand-blue text-white'
+                    : 'border-white/20 bg-transparent text-brand-ink hover:border-brand-blue-text'
                 )}
               >
                 {tab.label}
               </button>
             );
           })}
+          <div className="hidden lg:block mt-auto pt-16">
+            <LogoMark className="h-12 w-auto" />
+            <p className="mt-3 text-[0.8rem] font-bold tracking-[0.28em] uppercase text-brand-ink leading-snug">Thiago<br />Mancilha<br />Reis</p>
+            <p className="mt-3 inline-flex items-center gap-2 text-[0.68rem] tracking-[0.24em] uppercase text-brand-muted"><Slashes className="text-xs" />Personal trainer</p>
+          </div>
         </nav>
 
         <div className="min-w-0">
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-5">
           <div>
-            <h1 className="font-display font-black text-2xl sm:text-3xl tracking-tight text-foreground">
+            <h1 className="title-display text-4xl sm:text-5xl text-brand-ink flex items-center gap-4">
               {mainTab === 'CRM' ? 'Alunos e leads' : mainTab === 'FINANCEIRO' ? 'Financeiro' : 'Agenda de aulas'}
+              <Slashes className="text-3xl" />
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               {mainTab === 'CRM'
@@ -824,7 +835,7 @@ export default function AdminDashboard() {
                 placeholder={mainTab === 'AGENDA' ? 'Filtre aulas por nome do aluno...' : 'Nome ou WhatsApp...'}
                 onChange={(e) => setState((s) => ({ ...s, page: 1, searchTerm: e.target.value }))}
                 className={cn(
-                  'w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-foreground placeholder:text-slate-500',
+                  'w-full pl-10 pr-3 py-2.5 rounded-sm bg-brand-bg border border-white/20 text-foreground placeholder:text-slate-500',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lime-400 focus-visible:border-lime-400 transition-all duration-300'
                 )}
               />
@@ -837,23 +848,25 @@ export default function AdminDashboard() {
             {(mainTab === 'CRM' ? [metricCards[0], metricCards[1], metricCards[2], metricCards[4]] : metricCards.slice(2)).map((card) => (
               <div
                 key={card.label}
-                className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4"
+                className="relative overflow-hidden chamfer-sm border border-white/15 bg-brand-surface p-5"
               >
-                <p className="text-[11px] uppercase tracking-widest font-bold text-slate-400">{card.label}</p>
-                <p className="mt-2 font-display text-2xl font-black tracking-tight text-foreground">{card.value}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{card.helper}</p>
+                <span aria-hidden="true" className="absolute -right-4 top-0 h-full w-10 bg-white/[0.05] -skew-x-[24deg]" />
+                <span aria-hidden="true" className="absolute right-8 top-0 h-full w-3 bg-brand-blue/50 -skew-x-[24deg]" />
+                <p className="relative text-[0.95rem] uppercase text-brand-ink">{card.label}</p>
+                <p className="relative mt-2 title-display text-4xl sm:text-[2.6rem] text-brand-ink">{card.value}</p>
+                <p className="relative mt-2 text-sm text-brand-muted leading-snug">{card.helper}</p>
               </div>
             ))}
           </div>
         )}
         {financialActionError && mainTab !== 'AGENDA' && (
-          <p role="alert" className="mb-5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          <p role="alert" className="mb-5 rounded-sm border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
             {financialActionError}
           </p>
         )}
 
         {!supabaseOk && (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 flex gap-4 items-start mb-6">
+          <div className="rounded-sm border border-amber-500/30 bg-amber-500/10 p-5 flex gap-4 items-start mb-6">
             <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0 mt-0.5" />
             <div>
               <h2 className="font-bold text-amber-300 mb-1">Supabase não conectado</h2>
@@ -867,7 +880,7 @@ export default function AdminDashboard() {
         )}
 
         {state.error && (
-          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5 flex flex-col gap-3 mb-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="rounded-sm border border-red-500/30 bg-red-500/10 p-5 flex flex-col gap-3 mb-6 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
               <div>
@@ -887,7 +900,7 @@ export default function AdminDashboard() {
         )}
 
         {state.initialLoad && state.loading && (
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-12 flex flex-col items-center justify-center gap-3">
+          <div className="rounded-sm border border-white/10 bg-brand-surface p-12 flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-8 h-8 text-lime-400 animate-spin" />
             <p className="text-muted-foreground text-sm">
               {mainTab === 'CRM' ? 'Carregando alunos...' : 'Carregando agenda e financeiro...'}
@@ -908,14 +921,14 @@ export default function AdminDashboard() {
                     setState((s) => ({ ...s, page: 1 }));
                   }}
                   className={cn(
-                    'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-all duration-300',
+                    'inline-flex items-center gap-3 border px-4 py-2 text-[1.05rem] transition-colors',
                     active
-                      ? 'border-lime-400/60 bg-lime-400/10 text-lime-300'
-                      : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-lime-400/40 hover:text-lime-300'
+                      ? 'border-brand-blue bg-brand-blue text-white'
+                      : 'border-white/20 bg-transparent text-brand-ink hover:border-brand-blue-text'
                   )}
                 >
                   <span className="font-semibold">{tab.label}</span>
-                  <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold', active ? 'bg-lime-400/15' : 'bg-slate-800')}>
+                  <span className={cn('px-2 py-0.5 text-xs font-bold', active ? 'bg-brand-bg/80 text-white' : 'bg-white/10')}>
                     {tabCounts[tab.key].toLocaleString('pt-BR')}
                   </span>
                 </button>
@@ -925,8 +938,8 @@ export default function AdminDashboard() {
         )}
 
         {!state.initialLoad && !state.loading && mainTab === 'CRM' && currentRows.length === 0 && (
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-10 sm:p-14 flex flex-col items-center justify-center text-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-slate-800/60 border border-slate-700/70 flex items-center justify-center text-muted-foreground">
+          <div className="rounded-sm border border-white/10 bg-brand-surface p-10 sm:p-14 flex flex-col items-center justify-center text-center gap-4">
+            <div className="w-16 h-16 rounded-sm bg-slate-800/60 border border-white/20/70 flex items-center justify-center text-muted-foreground">
               <Inbox className="w-8 h-8" />
             </div>
             <div>
@@ -944,7 +957,7 @@ export default function AdminDashboard() {
                 <Button
                   variant="outline"
                   onClick={() => setState((s) => ({ ...s, page: 1, searchTerm: '' }))}
-                  className="inline-flex items-center gap-2 border-slate-700 hover:border-lime-400 hover:text-lime-400 transition-all duration-300"
+                  className="inline-flex items-center gap-2 border-white/20 hover:border-lime-400 hover:text-lime-400 transition-all duration-300"
                 >
                   <X className="w-4 h-4" />
                   Limpar busca
@@ -952,7 +965,7 @@ export default function AdminDashboard() {
               )}
               <Button
                 onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center gap-2 bg-lime-400 text-black hover:bg-lime-300 border border-lime-400/70"
+                className="inline-flex items-center gap-2 bg-brand-blue text-white hover:bg-brand-blue-hover border border-brand-blue"
               >
                 <Plus className="w-4 h-4" />
                 Cadastrar Aluno
@@ -965,18 +978,18 @@ export default function AdminDashboard() {
           <>
             <div className="mb-3 flex items-end justify-between gap-3">
               <div>
-                <h2 className="font-bold text-lg text-foreground">Pessoas cadastradas</h2>
+                <h2 className="title-display text-3xl text-brand-ink flex items-center gap-3">Pessoas cadastradas <Slashes className="text-2xl" /></h2>
                 <p className="text-sm text-muted-foreground">Abra a ficha para consultar dados e ações.</p>
               </div>
             </div>
-            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
+            <div className="overflow-hidden rounded-sm border border-white/10 bg-brand-surface">
               {currentRows.map((aluno) => {
                 const quickAction = getQuickActionType(aluno);
                 const finStatus = getFinancialStatus(aluno);
                 return (
-                  <div key={aluno.id} className="grid gap-3 border-b border-slate-800 px-4 py-4 last:border-b-0 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:px-5">
+                  <div key={aluno.id} className="relative grid gap-3 border-b border-white/10 px-5 py-4 before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[3px] before:bg-brand-blue last:border-b-0 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:px-5">
                     <div className="min-w-0">
-                      <p className="break-words font-semibold text-foreground">{aluno.nome}</p>
+                      <p className="break-words title-display !not-italic !font-bold text-[1.35rem] text-brand-ink">{aluno.nome}</p>
                       <p className="mt-1 text-xs text-slate-400">{getOrigemLabel(aluno.origem)} · {formatDateTimeBR(aluno.created_at)}</p>
                       <p className="mt-1 text-xs text-slate-400">{aluno.whatsapp}</p>
                     </div>
@@ -988,8 +1001,8 @@ export default function AdminDashboard() {
                       {isLeadStatus(aluno.status) ? <span>Próximo passo: entrar em contato</span> : aluno.status === 'ATIVO' ? aluno.permuta ? <span>Permuta · sem cobrança</span> : <><span>{formatCurrencyBR(aluno.mensalidade)} · {aluno.dia_vencimento ? `dia ${aluno.dia_vencimento}` : 'sem vencimento'}</span><p className="mt-1 text-xs text-slate-400">{FIN_STATUS_LABEL[finStatus]}</p></> : <span>Cadastro {STATUS_LABEL[aluno.status]?.toLowerCase() ?? aluno.status.toLowerCase()}</span>}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                      <a href={buildPrefilledWhatsAppLink(aluno, quickAction)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-lime-400/25 bg-lime-400/10 px-3 text-xs font-semibold text-lime-300 hover:border-lime-400/60"><MessageCircle className="h-4 w-4" />{quickAction === 'charge' ? 'Cobrar' : 'Conversar'}</a>
-                      <Button variant="outline" size="sm" onClick={() => setSelected(aluno)} className="border-slate-700 hover:border-lime-400 hover:text-lime-400"><ListTodo className="mr-1.5 h-4 w-4" />Ver ficha</Button>
+                      <a href={buildPrefilledWhatsAppLink(aluno, quickAction)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 border border-brand-blue px-3.5 text-[0.95rem] text-brand-ink hover:bg-brand-blue/20"><MessageCircle className="h-4 w-4" />{quickAction === 'charge' ? 'Cobrar' : 'Conversar'}</a>
+                      <Button variant="outline" size="sm" onClick={() => setSelected(aluno)} className="border-white/20 hover:border-lime-400 hover:text-lime-400"><ListTodo className="mr-1.5 h-4 w-4" />Ver ficha</Button>
                     </div>
                   </div>
                 );
@@ -1017,12 +1030,12 @@ export default function AdminDashboard() {
                   size="sm"
                   onClick={() => setState((s) => ({ ...s, page: Math.max(1, s.page - 1) }))}
                   disabled={state.page <= 1 || state.loading}
-                  className="border-slate-700 hover:border-lime-400 hover:text-lime-400 transition-all duration-300 disabled:opacity-50"
+                  className="border-white/20 hover:border-lime-400 hover:text-lime-400 transition-all duration-300 disabled:opacity-50"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   Anterior
                 </Button>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs tabular-nums text-slate-300">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-brand-bg border border-white/10 text-xs tabular-nums text-slate-300">
                   Página <span className="font-bold text-lime-400">{state.page}</span> / {pageCount}
                 </div>
                 <Button
@@ -1030,7 +1043,7 @@ export default function AdminDashboard() {
                   size="sm"
                   onClick={() => setState((s) => ({ ...s, page: Math.min(pageCount, s.page + 1) }))}
                   disabled={state.page >= pageCount || state.loading}
-                  className="border-slate-700 hover:border-lime-400 hover:text-lime-400 transition-all duration-300 disabled:opacity-50"
+                  className="border-white/20 hover:border-lime-400 hover:text-lime-400 transition-all duration-300 disabled:opacity-50"
                 >
                   Próxima
                   <ChevronRight className="w-4 h-4" />
@@ -1043,23 +1056,23 @@ export default function AdminDashboard() {
         {!state.initialLoad && mainTab === 'FINANCEIRO' && (
           <section aria-labelledby="financeiro-heading">
             <div className="mb-3">
-              <h2 id="financeiro-heading" className="text-lg font-bold text-foreground">Mensalidades dos alunos ativos</h2>
+              <h2 id="financeiro-heading" className="title-display text-3xl text-brand-ink">Mensalidades dos alunos ativos</h2>
               <p className="text-sm text-muted-foreground">Consulte a situação do mês e registre pagamentos confirmados.</p>
             </div>
             {financialRows.length === 0 ? (
-              <p className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">Nenhum aluno ativo encontrado.</p>
+              <p className="rounded-sm border border-white/10 bg-brand-surface p-6 text-sm text-slate-300">Nenhum aluno ativo encontrado.</p>
             ) : (
-              <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
+              <div className="overflow-hidden rounded-sm border border-white/10 bg-brand-surface">
                 {financialRows.map((aluno) => {
                   const finStatus = getFinancialStatus(aluno);
                   return (
-                    <div key={aluno.id} className="grid gap-3 border-b border-slate-800 px-4 py-4 last:border-b-0 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:px-5">
+                    <div key={aluno.id} className="grid gap-3 border-b border-white/10 px-4 py-4 last:border-b-0 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:px-5">
                       <div className="min-w-0"><p className="break-words font-semibold text-foreground">{aluno.nome}</p><p className="mt-1 text-xs text-slate-400">{aluno.whatsapp}</p></div>
                       <div className="text-sm text-slate-200"><p className="font-medium">{aluno.permuta ? 'Sem cobrança' : formatCurrencyBR(aluno.mensalidade)}</p><p className="mt-1 text-xs text-slate-400">{aluno.permuta ? 'Permuta de serviços' : aluno.dia_vencimento ? `Vence dia ${aluno.dia_vencimento}` : 'Vencimento não informado'}</p></div>
                       <div><Badge className={cn('border rounded-full text-[11px] font-bold uppercase tracking-wider', FIN_STATUS_CLASS[finStatus])}>{FIN_STATUS_LABEL[finStatus]}</Badge></div>
                       <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                        {!aluno.permuta && <><Button size="sm" variant="outline" onClick={() => markAsPaid(aluno.id)} disabled={finStatus === 'PAGO' || finStatus === 'NAO_CONFIGURADO' || paymentSavingId === aluno.id} className="border-slate-700 hover:border-emerald-400 hover:text-emerald-300"><CreditCard className="mr-1.5 h-4 w-4" />{finStatus === 'PAGO' ? 'Pago' : paymentSavingId === aluno.id ? 'Salvando…' : 'Marcar pago'}</Button>
-                        <a href={buildPrefilledWhatsAppLink(aluno, 'charge')} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-lime-400/25 bg-lime-400/10 px-3 text-xs font-semibold text-lime-300 hover:border-lime-400/60"><MessageCircle className="h-4 w-4" />Cobrar</a></>}
+                        {!aluno.permuta && <><Button size="sm" variant="outline" onClick={() => markAsPaid(aluno.id)} disabled={finStatus === 'PAGO' || finStatus === 'NAO_CONFIGURADO' || paymentSavingId === aluno.id} className="border-white/20 hover:border-emerald-400 hover:text-emerald-300"><CreditCard className="mr-1.5 h-4 w-4" />{finStatus === 'PAGO' ? 'Pago' : paymentSavingId === aluno.id ? 'Salvando…' : 'Marcar pago'}</Button>
+                        <a href={buildPrefilledWhatsAppLink(aluno, 'charge')} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-sm border border-lime-400/25 bg-lime-400/10 px-3 text-xs font-semibold text-lime-300 hover:border-lime-400/60"><MessageCircle className="h-4 w-4" />Cobrar</a></>}
                         <Button size="sm" variant="ghost" onClick={() => setSelected(aluno)} className="text-slate-300 hover:text-lime-400">Ver ficha</Button>
                       </div>
                     </div>
@@ -1072,14 +1085,14 @@ export default function AdminDashboard() {
 
         {!state.initialLoad && mainTab === 'AGENDA' && (
           <div className="space-y-5">
-            <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 sm:p-5">
+            <div className="rounded-sm border border-white/10 bg-brand-surface p-4 sm:p-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setAgendaWeekStart((current) => addDays(current, -7))}
-                    className="border-slate-700 hover:border-lime-400 hover:text-lime-400"
+                    className="border-white/20 hover:border-lime-400 hover:text-lime-400"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     Semana anterior
@@ -1092,7 +1105,7 @@ export default function AdminDashboard() {
                       setAgendaWeekStart(getWeekStart(today));
                       setAgendaSelectedDate(toISODateLocal(today));
                     }}
-                    className="border-slate-700 hover:border-lime-400 hover:text-lime-400"
+                    className="border-white/20 hover:border-lime-400 hover:text-lime-400"
                   >
                     Hoje
                   </Button>
@@ -1100,7 +1113,7 @@ export default function AdminDashboard() {
                     variant="outline"
                     size="sm"
                     onClick={() => setAgendaWeekStart((current) => addDays(current, 7))}
-                    className="border-slate-700 hover:border-lime-400 hover:text-lime-400"
+                    className="border-white/20 hover:border-lime-400 hover:text-lime-400"
                   >
                     Próxima semana
                     <ChevronRight className="w-4 h-4" />
@@ -1114,8 +1127,8 @@ export default function AdminDashboard() {
                     onClick={() => setAgendaView('SEMANA')}
                     className={cn(
                       agendaView === 'SEMANA'
-                        ? 'bg-lime-400 text-black hover:bg-lime-300'
-                        : 'border-slate-700 hover:border-lime-400 hover:text-lime-400'
+                        ? 'bg-brand-blue text-white hover:bg-brand-blue-hover'
+                        : 'border-white/20 hover:border-lime-400 hover:text-lime-400'
                     )}
                   >
                     Semana
@@ -1126,8 +1139,8 @@ export default function AdminDashboard() {
                     onClick={() => setAgendaView('DIA')}
                     className={cn(
                       agendaView === 'DIA'
-                        ? 'bg-lime-400 text-black hover:bg-lime-300'
-                        : 'border-slate-700 hover:border-lime-400 hover:text-lime-400'
+                        ? 'bg-brand-blue text-white hover:bg-brand-blue-hover'
+                        : 'border-white/20 hover:border-lime-400 hover:text-lime-400'
                     )}
                   >
                     Dia
@@ -1146,8 +1159,8 @@ export default function AdminDashboard() {
                     <div
                       key={isoDate}
                       className={cn(
-                        'min-w-0 rounded-2xl border bg-slate-900/60 backdrop-blur-md p-3 sm:p-4 min-h-[240px]',
-                        isSelected ? 'border-lime-400/60' : 'border-slate-800/80'
+                        'min-w-0 rounded-sm border bg-brand-surface p-3 sm:p-4 min-h-[240px]',
+                        isSelected ? 'border-lime-400/60' : 'border-white/10'
                       )}
                     >
                       <button
@@ -1166,7 +1179,7 @@ export default function AdminDashboard() {
 
                       <div className="mt-3 space-y-2">
                         {dayRows.length === 0 ? (
-                          <div className="rounded-xl border border-dashed border-slate-700 px-3 py-4 text-center text-xs text-slate-500">
+                          <div className="rounded-sm border border-dashed border-white/20 px-3 py-4 text-center text-xs text-slate-500">
                             Nenhuma aula agendada.
                           </div>
                         ) : (
@@ -1181,7 +1194,7 @@ export default function AdminDashboard() {
                                   setSelectedAgendamento(item);
                                   setIsAgendaOpen(true);
                                 }}
-                                className="w-full min-w-0 rounded-xl border border-slate-800 bg-slate-950/40 px-2 py-2 text-left hover:border-lime-400/40"
+                                className="w-full min-w-0 rounded-sm border border-white/10 bg-slate-950/40 px-2 py-2 text-left hover:border-lime-400/40"
                               >
                                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                                   <span className="text-sm font-semibold text-foreground">{formatTimeBR(item.data_hora)}</span>
@@ -1203,7 +1216,7 @@ export default function AdminDashboard() {
                         variant="outline"
                         size="sm"
                         onClick={() => openAgendaCreate(isoDate)}
-                        className="mt-3 h-auto min-h-9 w-full whitespace-normal px-2 py-1.5 text-center border-slate-700 hover:border-emerald-400 hover:text-emerald-300"
+                        className="mt-3 h-auto min-h-9 w-full whitespace-normal px-2 py-1.5 text-center border-white/20 hover:border-emerald-400 hover:text-emerald-300"
                       >
                         <Plus className="w-4 h-4 shrink-0" />
                         Novo horário
@@ -1213,7 +1226,7 @@ export default function AdminDashboard() {
                 })}
               </div>
             ) : (
-              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 sm:p-5">
+              <div className="rounded-sm border border-white/10 bg-brand-surface p-4 sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-[11px] uppercase tracking-widest font-bold text-slate-400">Dia selecionado</p>
@@ -1241,7 +1254,7 @@ export default function AdminDashboard() {
 
                 <div className="mt-5 space-y-3">
                   {selectedAgendaRowsFiltered.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
+                    <div className="rounded-sm border border-dashed border-white/20 px-4 py-8 text-center text-sm text-slate-500">
                       Nenhuma aula encontrada para esta data.
                     </div>
                   ) : (
@@ -1250,7 +1263,7 @@ export default function AdminDashboard() {
                       return (
                         <div
                           key={item.id}
-                          className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4"
+                          className="rounded-sm border border-white/10 bg-slate-950/40 p-4"
                         >
                           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                             <div>
@@ -1272,7 +1285,7 @@ export default function AdminDashboard() {
                                   size="sm"
                                   onClick={() => updateAgendamentoStatus(item, status)}
                                   className={cn(
-                                    'border-slate-700 hover:border-lime-400 hover:text-lime-300',
+                                    'border-white/20 hover:border-lime-400 hover:text-lime-300',
                                     item.status === status && 'border-lime-400/60 text-lime-300'
                                   )}
                                 >
@@ -1286,7 +1299,7 @@ export default function AdminDashboard() {
                                   setSelectedAgendamento(item);
                                   setIsAgendaOpen(true);
                                 }}
-                                className="border-slate-700 hover:border-lime-400 hover:text-lime-300"
+                                className="border-white/20 hover:border-lime-400 hover:text-lime-300"
                               >
                                 Detalhes
                               </Button>
@@ -1307,7 +1320,7 @@ export default function AdminDashboard() {
 
       <AnimatePresence>
         <Dialog open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
-          <DialogContent className="sm:max-w-3xl max-h-[92vh] overflow-hidden p-0 gap-0 border border-slate-800/80 bg-slate-900/95 backdrop-blur-xl">
+          <DialogContent className="sm:max-w-3xl max-h-[92vh] overflow-hidden p-0 gap-0 border border-white/10 bg-slate-900/95">
             <div className="sr-only">
               <DialogTitle>Ficha completa do aluno</DialogTitle>
               <DialogDescription>
@@ -1334,7 +1347,7 @@ export default function AdminDashboard() {
 
       <AnimatePresence>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogContent className="sm:max-w-xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-slate-800/80 bg-slate-900/95 backdrop-blur-xl">
+          <DialogContent className="sm:max-w-xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-white/10 bg-slate-900/95">
             <div className="sr-only">
               <DialogTitle>Cadastrar aluno manualmente</DialogTitle>
               <DialogDescription>
@@ -1360,7 +1373,7 @@ export default function AdminDashboard() {
             if (!open) setSelectedAgendamento(null);
           }}
         >
-          <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-slate-800/80 bg-slate-900/95 backdrop-blur-xl">
+          <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-white/10 bg-slate-900/95">
             <div className="sr-only">
               <DialogTitle>{selectedAgendamento ? 'Editar aula' : 'Agendar aula'}</DialogTitle>
               <DialogDescription>
@@ -1505,7 +1518,7 @@ function ManualCreateModal({
         <button
           type="button"
           onClick={onClose}
-          className="w-9 h-9 rounded-xl border border-slate-700/80 text-slate-400 hover:text-lime-400 hover:border-lime-400 hover:bg-lime-400/10 inline-flex items-center justify-center"
+          className="w-9 h-9 rounded-sm border border-white/20 text-slate-400 hover:text-lime-400 hover:border-lime-400 hover:bg-lime-400/10 inline-flex items-center justify-center"
         >
           <X className="w-4.5 h-4.5" />
         </button>
@@ -1545,7 +1558,7 @@ function ManualCreateModal({
               placeholder="Opcional"
             />
           </Field>
-          <label className="sm:col-span-2 flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-sm text-slate-200">
+          <label className="sm:col-span-2 flex items-start gap-3 rounded-sm border border-white/20 bg-brand-surface p-3 text-sm text-slate-200">
             <input type="checkbox" checked={form.permuta} onChange={(e) => setField('permuta', e.target.checked)} className="mt-1 accent-lime-400" />
             <span><strong>Permuta de serviços</strong><span className="mt-1 block text-xs text-slate-400">Aluno sem mensalidade ou vencimento, sem cobrança.</span></span>
           </label>
@@ -1581,12 +1594,12 @@ function ManualCreateModal({
         </div>
 
         {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          <div className="rounded-sm border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
             {error}
           </div>
         )}
         {form.status !== 'ATIVO' && (
-          <div className="rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs text-slate-300">
+          <div className="rounded-sm border border-white/20 bg-brand-surface px-3 py-2 text-xs text-slate-300">
             Leads, negociações e perdidos ficam sem mensalidade e sem vencimento até serem convertidos em aluno ativo.
           </div>
         )}
@@ -1595,7 +1608,7 @@ function ManualCreateModal({
           <Button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 bg-lime-400 text-black hover:bg-lime-300 border border-lime-400/70"
+            className="inline-flex items-center gap-2 bg-brand-blue text-white hover:bg-brand-blue-hover border border-brand-blue"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Salvar aluno
@@ -1730,7 +1743,7 @@ function DetailModal({
     value: React.ReactNode,
     opts?: { Icon?: React.ComponentType<{ className?: string }>; mono?: boolean; accent?: boolean }
   ) => (
-    <div className="grid grid-cols-3 gap-3 items-start py-2 border-b border-slate-800/70 last:border-b-0">
+    <div className="grid grid-cols-3 gap-3 items-start py-2 border-b border-white/10/70 last:border-b-0">
       <dt className="text-[11px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1.5 pt-1">
         {opts?.Icon && <opts.Icon className="w-3.5 h-3.5 text-lime-400/80" />}
         {label}
@@ -1790,9 +1803,9 @@ function DetailModal({
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className="max-h-[92vh] overflow-y-auto"
     >
-      <div className="sticky top-0 z-10 bg-slate-900/98 backdrop-blur-md border-b border-slate-800/80 px-5 sm:px-6 py-4 flex items-start justify-between gap-3">
+      <div className="sticky top-0 z-10 bg-slate-900/98 border-b border-white/10 px-5 sm:px-6 py-4 flex items-start justify-between gap-3">
         <div className="flex items-start gap-3.5 min-w-0">
-          <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-lime-400 to-emerald-500 text-black flex items-center justify-center font-black text-lg shadow-[0_0_30px_rgba(132,204,22,0.25)]">
+          <div className="w-12 h-12 shrink-0 rounded-sm bg-brand-blue text-white flex items-center justify-center font-black text-lg">
             {aluno.nome.slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
@@ -1817,7 +1830,7 @@ function DetailModal({
             onClick={onClose}
             type="button"
             aria-label="Fechar detalhes da ficha"
-            className="w-9 h-9 rounded-xl border border-slate-700/80 text-slate-400 hover:text-lime-400 hover:border-lime-400 hover:bg-lime-400/10 inline-flex items-center justify-center transition-all duration-300"
+            className="w-9 h-9 rounded-sm border border-white/20 text-slate-400 hover:text-lime-400 hover:border-lime-400 hover:bg-lime-400/10 inline-flex items-center justify-center transition-all duration-300"
           >
             <X className="w-4.5 h-4.5" />
           </button>
@@ -1827,7 +1840,7 @@ function DetailModal({
       <div className="px-5 sm:px-6 py-5 space-y-4">
         <Section title="CRM e cobrança" defaultOpen>
           {canConvert && !conversionMode && (
-            <div className="mb-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4">
+            <div className="mb-4 rounded-sm border border-emerald-400/30 bg-emerald-500/10 p-4">
               <p className="text-sm font-semibold text-emerald-200">Esse registro ainda está na etapa de lead.</p>
               <p className="mt-1 text-xs text-emerald-100/80">
                 Quando ele fechar, clique em converter e informe a mensalidade ou selecione permuta.
@@ -1842,7 +1855,7 @@ function DetailModal({
           )}
 
           {showBillingFields && (
-            <label className="mb-4 flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-sm text-slate-200">
+            <label className="mb-4 flex items-start gap-3 rounded-sm border border-white/20 bg-brand-surface p-3 text-sm text-slate-200">
               <input type="checkbox" checked={draft.permuta} onChange={(e) => setDraft((s) => ({ ...s, permuta: e.target.checked }))} className="mt-1 accent-lime-400" />
               <span><strong>Permuta de serviços</strong><span className="mt-1 block text-xs text-slate-400">Sem mensalidade, vencimento ou cobrança. Salve para confirmar.</span></span>
             </label>
@@ -1883,7 +1896,7 @@ function DetailModal({
             </Field>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4">
+          <div className="mt-4 rounded-sm border border-white/10 bg-slate-900/40 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Badge className={cn('border rounded-full text-[11px] font-bold uppercase tracking-wider', FIN_STATUS_CLASS[finStatus])}>
@@ -1907,14 +1920,14 @@ function DetailModal({
             </div>
 
             {payError && (
-              <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+              <div className="mt-3 rounded-sm border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
                 {payError}
               </div>
             )}
           </div>
 
           {saveError && (
-            <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <div className="mt-3 rounded-sm border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
               {saveError}
             </div>
           )}
@@ -1937,7 +1950,7 @@ function DetailModal({
                     setSaveError(null);
                     setDraft((s) => ({ ...s, status: aluno.status }));
                   }}
-                  className="border-slate-700 hover:border-slate-500"
+                  className="border-white/20 hover:border-slate-500"
                 >
                   Cancelar conversão
                 </Button>
@@ -1946,7 +1959,7 @@ function DetailModal({
             <Button
               onClick={() => saveCrmFields('default')}
               disabled={saving}
-              className="inline-flex items-center gap-2 bg-lime-400 text-black hover:bg-lime-300 border border-lime-400/70"
+              className="inline-flex items-center gap-2 bg-brand-blue text-white hover:bg-brand-blue-hover border border-brand-blue"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Salvar CRM
@@ -1956,7 +1969,7 @@ function DetailModal({
               href={buildPrefilledWhatsAppLink(aluno, quickAction)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-lime-400/25 text-lime-300 hover:border-lime-400/60"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-slate-900 border border-lime-400/25 text-lime-300 hover:border-lime-400/60"
             >
               <MessageCircle className="w-4 h-4" />
               {quickAction === 'charge' ? 'Mensagem de cobrança' : 'Mensagem de boas-vindas'}
@@ -2028,7 +2041,7 @@ function DetailModal({
 
         <Section title="Histórico de pagamentos" defaultOpen>
           {faturasDoAluno.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-700 px-3 py-5 text-sm text-slate-500">
+            <div className="rounded-sm border border-dashed border-white/20 px-3 py-5 text-sm text-slate-500">
               Nenhuma fatura registrada para este aluno ainda.
             </div>
           ) : (
@@ -2036,7 +2049,7 @@ function DetailModal({
               {faturasDoAluno.map((fatura) => (
                 <div
                   key={fatura.id}
-                  className="rounded-2xl border border-slate-800/70 bg-slate-950/40 px-4 py-3"
+                  className="rounded-sm border border-white/10/70 bg-slate-950/40 px-4 py-3"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -2068,12 +2081,12 @@ function DetailModal({
 
         <Section title="Agenda do aluno" defaultOpen>
           {agendaDoAluno.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-700 px-3 py-5 text-sm text-slate-500">
+            <div className="rounded-sm border border-dashed border-white/20 px-3 py-5 text-sm text-slate-500">
               Nenhuma aula vinculada para este aluno ainda.
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-xl border border-slate-800/70 bg-slate-950/40 px-4 py-3">
+              <div className="rounded-sm border border-white/10/70 bg-slate-950/40 px-4 py-3">
                 <p className="text-xs uppercase tracking-widest font-bold text-slate-400">Próximas aulas</p>
                 <div className="mt-3 space-y-2">
                   {proximasAulas.length === 0 ? (
@@ -2096,7 +2109,7 @@ function DetailModal({
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-800/70 bg-slate-950/40 px-4 py-3">
+              <div className="rounded-sm border border-white/10/70 bg-slate-950/40 px-4 py-3">
                 <p className="text-xs uppercase tracking-widest font-bold text-slate-400">Histórico recente</p>
                 <div className="mt-3 space-y-2">
                   {agendaDoAluno.slice(-6).reverse().map((item) => (
@@ -2142,7 +2155,7 @@ function DetailModal({
             href={aluno.whatsapp_link || buildWhatsAppLink(aluno.whatsapp)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-lime-400 text-black hover:bg-lime-300 border border-lime-400/70 font-bold tracking-wide uppercase text-sm transition-all duration-300"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-brand-blue text-white hover:bg-brand-blue-hover border border-brand-blue font-bold tracking-wide uppercase text-sm transition-all duration-300"
           >
             <MessageCircle className="w-4 h-4" />
             Abrir WhatsApp
@@ -2165,7 +2178,7 @@ function DetailModal({
               const csv = buildSheetCSV([header, ...rows]);
               downloadCSV(csv, `crm-${aluno.nome.toLowerCase().replace(/\s+/g, '-').slice(0, 32)}.csv`);
             }}
-            className="inline-flex items-center gap-2 border-slate-700 hover:border-lime-400 hover:text-lime-400 transition-all duration-300"
+            className="inline-flex items-center gap-2 border-white/20 hover:border-lime-400 hover:text-lime-400 transition-all duration-300"
           >
             <Download className="w-4 h-4" />
             Exportar ficha
@@ -2293,7 +2306,7 @@ function AgendaModal({
         <button
           type="button"
           onClick={onClose}
-          className="w-9 h-9 rounded-xl border border-slate-700/80 text-slate-400 hover:text-lime-400 hover:border-lime-400 hover:bg-lime-400/10 inline-flex items-center justify-center"
+          className="w-9 h-9 rounded-sm border border-white/20 text-slate-400 hover:text-lime-400 hover:border-lime-400 hover:bg-lime-400/10 inline-flex items-center justify-center"
         >
           <X className="w-4.5 h-4.5" />
         </button>
@@ -2357,7 +2370,7 @@ function AgendaModal({
         </Field>
 
         {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          <div className="rounded-sm border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
             {error}
           </div>
         )}
@@ -2381,7 +2394,7 @@ function AgendaModal({
 }
 
 const INPUT_CLASS =
-  'w-full rounded-xl bg-slate-900/80 border border-slate-700/80 px-3 py-2.5 text-sm text-foreground placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:border-lime-400 transition-all duration-300';
+  'w-full rounded-sm bg-brand-bg border border-white/20 px-3 py-2.5 text-sm text-foreground placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:border-lime-400 transition-all duration-300';
 
 function Field({
   label,
@@ -2428,7 +2441,7 @@ function Section({
     setInner((v) => !v);
   };
   return (
-    <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 overflow-hidden">
+    <div className="rounded-sm border border-white/10 bg-slate-900/40 overflow-hidden">
       <button
         type="button"
         onClick={toggle}

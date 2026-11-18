@@ -389,3 +389,29 @@ html.brand .btn-secondary:hover { color: #fff; border-color: #6A91FF; }
     background-size: 48px 48px;
   }
 }
+
+/* --- Painel admin: rótulos, abas e botões condensados em caixa alta ----- */
+html.brand-admin .uppercase,
+html.brand-admin button,
+html.brand-admin [role="tab"],
+html.brand-admin label {
+  font-family: 'Barlow Condensed', 'Archivo', system-ui, sans-serif;
+  letter-spacing: 0.04em;
+}
+html.brand-admin button,
+html.brand-admin [role="tab"] {
+  text-transform: uppercase;
+  font-weight: 700;
+}
+html.brand-admin label { font-size: 0.9rem; }
+html.brand-admin .uppercase { font-weight: 700; }
+html.brand-admin input,
+html.brand-admin select,
+html.brand-admin textarea {
+  border-radius: 2px;
+}
+html.brand-admin input:focus-visible,
+html.brand-admin select:focus-visible,
+html.brand-admin textarea:focus-visible {
+  border-color: #6A91FF;
+}
