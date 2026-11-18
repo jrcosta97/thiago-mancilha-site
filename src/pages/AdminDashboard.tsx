@@ -40,10 +40,14 @@ import {
   type AlunoStatus,
   type AgendamentosRow,
   type FaturasRow,
+  type HorariosFixosRow,
   type AgendamentoStatus,
 } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useBrandTheme } from '@/lib/useBrandTheme';
+import AgendaUnificada from '@/components/admin/AgendaUnificada';
+import HorarioFixoModal from '@/components/admin/HorarioFixoModal';
+import { registroDaOcorrencia, type AulaOcorrencia, type AulaStatus } from '@/lib/agenda-unificada';
 import { LogoMark } from '@/components/brand/Logo';
 import { Slashes } from '@/components/brand/SectionLabel';
 import { PIX_KEY } from '@/lib/contact';
@@ -94,6 +98,8 @@ interface DashboardState {
   rows: AlunosRow[];
   agendamentos: AgendamentosRow[];
   faturas: FaturasRow[];
+  horarios: HorariosFixosRow[];
+  horariosIndisponiveis: boolean;
   page: number;
   searchTerm: string;
   loading: boolean;
@@ -340,6 +346,8 @@ export default function AdminDashboard() {
     rows: [],
     agendamentos: [],
     faturas: [],
+    horarios: [],
+    horariosIndisponiveis: false,
     page: 1,
     searchTerm: '',
     loading: true,
@@ -352,14 +360,14 @@ export default function AdminDashboard() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [openConversionForId, setOpenConversionForId] = useState<string | null>(null);
   const [mainTab, setMainTab] = useState<MainAdminTab>('CRM');
-  const [agendaWeekStart, setAgendaWeekStart] = useState<Date>(() => getWeekStart(new Date()));
-  const [agendaView, setAgendaView] = useState<'SEMANA' | 'DIA'>('SEMANA');
   const [agendaSelectedDate, setAgendaSelectedDate] = useState<string>(() => toISODateLocal(new Date()));
   const [isAgendaOpen, setIsAgendaOpen] = useState(false);
   const [selectedAgendamento, setSelectedAgendamento] = useState<AgendamentosRow | null>(null);
   const [agendaPrefillDate, setAgendaPrefillDate] = useState<string>(() => toISODateLocal(new Date()));
   const [financialActionError, setFinancialActionError] = useState<string | null>(null);
   const [paymentSavingId, setPaymentSavingId] = useState<string | null>(null);
+  const [horarioModal, setHorarioModal] = useState<{ open: boolean; horario: HorariosFixosRow | null }>({ open: false, horario: null });
+  const [agendaActionError, setAgendaActionError] = useState<string | null>(null);
 
   const supabaseOk = useMemo(() => isSupabaseConfigured(), []);
 
@@ -381,11 +389,15 @@ export default function AdminDashboard() {
     }
 
     try {
-      const [alunosRes, agendamentosRes, faturasRes] = await Promise.all([
+      const [alunosRes, agendamentosRes, faturasRes, horariosRes] = await Promise.all([
         sb.from('alunos').select('*').order('created_at', { ascending: false }),
         sb.from('agendamentos').select('*').order('data_hora', { ascending: true }),
         sb.from('faturas').select('*').order('created_at', { ascending: false }),
+        sb.from('horarios_fixos').select('*').order('hora', { ascending: true }),
       ]);
+      if (horariosRes.error) {
+        console.warn('[CRM] Horários fixos indisponíveis:', horariosRes.error.message);
+      }
 
       if (alunosRes.error) throw alunosRes.error;
       if (agendamentosRes.error) throw agendamentosRes.error;
@@ -396,6 +408,8 @@ export default function AdminDashboard() {
         rows: (alunosRes.data ?? []) as AlunosRow[],
         agendamentos: (agendamentosRes.data ?? []) as AgendamentosRow[],
         faturas: (faturasRes.data ?? []) as FaturasRow[],
+        horarios: horariosRes.error ? [] : ((horariosRes.data ?? []) as HorariosFixosRow[]),
+        horariosIndisponiveis: !!horariosRes.error,
         loading: false,
         initialLoad: false,
         error: null,
@@ -545,6 +559,44 @@ export default function AdminDashboard() {
     setSelectedAgendamento((current) => (current?.id === agendamento.id ? agendamento : current));
   };
 
+  const syncHorarioRow = (horario: HorariosFixosRow) => {
+    setState((s) => {
+      const exists = s.horarios.some((item) => item.id === horario.id);
+      return {
+        ...s,
+        horarios: exists ? s.horarios.map((item) => (item.id === horario.id ? horario : item)) : [...s.horarios, horario],
+      };
+    });
+  };
+
+  /** Presença, falta ou cancelamento de uma aula; cria o registro da ocorrência do horário fixo se ainda não existir. */
+  const marcarOcorrencia = async (ocorrencia: AulaOcorrencia, status: AulaStatus) => {
+    setAgendaActionError(null);
+    const sb = getSupabase();
+    if (!sb) {
+      setAgendaActionError('Supabase não está configurado neste ambiente.');
+      return;
+    }
+    try {
+      if (ocorrencia.agendamentoId) {
+        const row = state.agendamentos.find((item) => item.id === ocorrencia.agendamentoId);
+        if (row) await updateAgendamentoStatus(row, status);
+        return;
+      }
+      const { data, error } = await sb
+        .from('agendamentos')
+        .insert(registroDaOcorrencia(ocorrencia, status) as never)
+        .select()
+        .single();
+      if (error) throw error;
+      if (data) syncAgendamentoRow(data as AgendamentosRow);
+    } catch (err) {
+      const { message } = formatSupabaseError(err, 'Registrar aula');
+      setAgendaActionError(`Não foi possível registrar a aula: ${message}`);
+      loadDashboardData({ silent: true });
+    }
+  };
+
   const markAsPaid = useCallback(
     async (alunoId: string) => {
       setFinancialActionError(null);
@@ -580,53 +632,6 @@ export default function AdminDashboard() {
     }));
     setFilterTab('ALL');
   };
-
-  const agendaDays = useMemo(
-    () => Array.from({ length: 7 }, (_, index) => addDays(agendaWeekStart, index)),
-    [agendaWeekStart]
-  );
-
-  const alunosById = useMemo(() => {
-    const map = new Map<string, AlunosRow>();
-    for (const row of state.rows) map.set(row.id, row);
-    return map;
-  }, [state.rows]);
-
-  const filteredAgendaRows = useMemo(() => {
-    const term = normalizeText(state.searchTerm);
-    return state.agendamentos.filter((item) => {
-      if (!term) return true;
-      const aluno = alunosById.get(item.aluno_id);
-      const haystack = [
-        aluno?.nome ?? '',
-        aluno?.whatsapp ?? '',
-        item.status,
-        item.observacoes ?? '',
-      ]
-        .map(normalizeText)
-        .join(' ');
-      return haystack.includes(term);
-    });
-  }, [alunosById, state.agendamentos, state.searchTerm]);
-
-  const filteredAgendaByDate = useMemo(() => {
-    const map = new Map<string, AgendamentosRow[]>();
-    for (const item of filteredAgendaRows) {
-      const key = formatAgendaDateTime(item.data_hora).date;
-      const list = map.get(key) ?? [];
-      list.push(item);
-      map.set(key, list);
-    }
-    for (const list of map.values()) {
-      list.sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
-    }
-    return map;
-  }, [filteredAgendaRows]);
-
-  const selectedAgendaRowsFiltered = useMemo(
-    () => filteredAgendaByDate.get(agendaSelectedDate) ?? [],
-    [agendaSelectedDate, filteredAgendaByDate]
-  );
 
   const openAgendaCreate = (date?: string) => {
     const nextDate = date ?? agendaSelectedDate;
@@ -730,18 +735,6 @@ export default function AdminDashboard() {
               <Plus className="w-4 h-4" />
               Cadastrar Aluno
             </Button>
-            {mainTab === 'AGENDA' && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  openAgendaCreate(agendaSelectedDate);
-                }}
-                className="inline-flex items-center gap-2 border-emerald-500/50 text-emerald-300 hover:border-emerald-400 hover:text-emerald-200"
-              >
-                <CalendarDays className="w-4 h-4" />
-                Agendar Aula
-              </Button>
-            )}
             <Button
               variant="outline"
               onClick={() => loadDashboardData()}
@@ -811,7 +804,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-5">
           <div>
             <h1 className="title-display text-4xl sm:text-5xl text-brand-ink flex items-center gap-4">
-              {mainTab === 'CRM' ? 'Alunos e leads' : mainTab === 'FINANCEIRO' ? 'Financeiro' : 'Agenda de aulas'}
+              {mainTab === 'CRM' ? 'Alunos e leads' : mainTab === 'FINANCEIRO' ? 'Financeiro' : 'Agenda'}
               <Slashes className="text-3xl" />
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
@@ -819,7 +812,7 @@ export default function AdminDashboard() {
                 ? `Leads do site e alunos antigos centralizados em um só painel — ${total.toLocaleString('pt-BR')} registro(s) nesta visualização`
                 : mainTab === 'FINANCEIRO'
                   ? 'Acompanhe as mensalidades e registre os pagamentos dos alunos ativos.'
-                  : `Visualize os treinos da semana e atualize presença em um só lugar — ${state.agendamentos.length.toLocaleString('pt-BR')} aula(s) carregada(s)`}
+                  : 'Aulas e cobranças no mesmo lugar: horários fixos, presença e quem precisa pagar.'}
             </p>
           </div>
           <div className={cn('w-full', mainTab === 'CRM' ? 'sm:max-w-md' : 'sm:max-w-lg')}>
@@ -1084,235 +1077,33 @@ export default function AdminDashboard() {
         )}
 
         {!state.initialLoad && mainTab === 'AGENDA' && (
-          <div className="space-y-5">
-            <div className="rounded-sm border border-white/10 bg-brand-surface p-4 sm:p-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAgendaWeekStart((current) => addDays(current, -7))}
-                    className="border-white/20 hover:border-lime-400 hover:text-lime-400"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Semana anterior
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const today = new Date();
-                      setAgendaWeekStart(getWeekStart(today));
-                      setAgendaSelectedDate(toISODateLocal(today));
-                    }}
-                    className="border-white/20 hover:border-lime-400 hover:text-lime-400"
-                  >
-                    Hoje
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAgendaWeekStart((current) => addDays(current, 7))}
-                    className="border-white/20 hover:border-lime-400 hover:text-lime-400"
-                  >
-                    Próxima semana
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant={agendaView === 'SEMANA' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setAgendaView('SEMANA')}
-                    className={cn(
-                      agendaView === 'SEMANA'
-                        ? 'bg-brand-blue text-white hover:bg-brand-blue-hover'
-                        : 'border-white/20 hover:border-lime-400 hover:text-lime-400'
-                    )}
-                  >
-                    Semana
-                  </Button>
-                  <Button
-                    variant={agendaView === 'DIA' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setAgendaView('DIA')}
-                    className={cn(
-                      agendaView === 'DIA'
-                        ? 'bg-brand-blue text-white hover:bg-brand-blue-hover'
-                        : 'border-white/20 hover:border-lime-400 hover:text-lime-400'
-                    )}
-                  >
-                    Dia
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {agendaView === 'SEMANA' ? (
-              <div className="grid gap-4 lg:grid-cols-7">
-                {agendaDays.map((day) => {
-                  const isoDate = toISODateLocal(day);
-                  const dayRows = filteredAgendaByDate.get(isoDate) ?? [];
-                  const isSelected = agendaSelectedDate === isoDate;
-                  return (
-                    <div
-                      key={isoDate}
-                      className={cn(
-                        'min-w-0 rounded-sm border bg-brand-surface p-3 sm:p-4 min-h-[240px]',
-                        isSelected ? 'border-lime-400/60' : 'border-white/10'
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setAgendaSelectedDate(isoDate)}
-                        className="w-full text-left"
-                      >
-                        <p className="text-[11px] uppercase tracking-widest font-bold text-slate-400">
-                          {DAY_NAMES[day.getUTCDay()]}
-                        </p>
-                        <p className="mt-1 text-base font-bold text-foreground">
-                          {day.toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit' })}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">{dayRows.length} aula(s)</p>
-                      </button>
-
-                      <div className="mt-3 space-y-2">
-                        {dayRows.length === 0 ? (
-                          <div className="rounded-sm border border-dashed border-white/20 px-3 py-4 text-center text-xs text-slate-500">
-                            Nenhuma aula agendada.
-                          </div>
-                        ) : (
-                          dayRows.map((item) => {
-                            const aluno = alunosById.get(item.aluno_id);
-                            return (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => {
-                                  setAgendaSelectedDate(isoDate);
-                                  setSelectedAgendamento(item);
-                                  setIsAgendaOpen(true);
-                                }}
-                                className="w-full min-w-0 rounded-sm border border-white/10 bg-slate-950/40 px-2 py-2 text-left hover:border-lime-400/40"
-                              >
-                                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                  <span className="text-sm font-semibold text-foreground">{formatTimeBR(item.data_hora)}</span>
-                                  <Badge className={cn('max-w-full whitespace-normal break-words border rounded-full text-[10px] font-bold uppercase', AGENDA_STATUS_COLOR[item.status])}>
-                                    {AGENDA_STATUS_LABEL[item.status]}
-                                  </Badge>
-                                </div>
-                                <p className="mt-1 break-words text-sm text-slate-200">{aluno?.nome ?? 'Aluno não encontrado'}</p>
-                                {item.observacoes && (
-                                  <p className="mt-1 line-clamp-2 text-xs text-slate-500">{item.observacoes}</p>
-                                )}
-                              </button>
-                            );
-                          })
-                        )}
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openAgendaCreate(isoDate)}
-                        className="mt-3 h-auto min-h-9 w-full whitespace-normal px-2 py-1.5 text-center border-white/20 hover:border-emerald-400 hover:text-emerald-300"
-                      >
-                        <Plus className="w-4 h-4 shrink-0" />
-                        Novo horário
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-sm border border-white/10 bg-brand-surface p-4 sm:p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-widest font-bold text-slate-400">Dia selecionado</p>
-                    <h2 className="mt-1 text-xl font-black text-foreground">{formatDateBR(`${agendaSelectedDate}T12:00:00-03:00`)}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedAgendaRowsFiltered.length} aula(s) visíveis neste dia.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      type="date"
-                      value={agendaSelectedDate}
-                      onChange={(e) => setAgendaSelectedDate(e.target.value)}
-                      className={INPUT_CLASS}
-                    />
-                    <Button
-                      onClick={() => openAgendaCreate(agendaSelectedDate)}
-                      className="bg-emerald-500 text-black hover:bg-emerald-400"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Agendar aula
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  {selectedAgendaRowsFiltered.length === 0 ? (
-                    <div className="rounded-sm border border-dashed border-white/20 px-4 py-8 text-center text-sm text-slate-500">
-                      Nenhuma aula encontrada para esta data.
-                    </div>
-                  ) : (
-                    selectedAgendaRowsFiltered.map((item) => {
-                      const aluno = alunosById.get(item.aluno_id);
-                      return (
-                        <div
-                          key={item.id}
-                          className="rounded-sm border border-white/10 bg-slate-950/40 p-4"
-                        >
-                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-lg font-bold text-foreground">{formatTimeBR(item.data_hora)}</p>
-                                <Badge className={cn('border rounded-full text-[10px] font-bold uppercase tracking-wider', AGENDA_STATUS_COLOR[item.status])}>
-                                  {AGENDA_STATUS_LABEL[item.status]}
-                                </Badge>
-                              </div>
-                              <p className="mt-1 text-sm text-slate-200">{aluno?.nome ?? 'Aluno não encontrado'}</p>
-                              <p className="mt-1 text-xs text-slate-500">{aluno?.whatsapp ?? 'Sem WhatsApp'}</p>
-                              {item.observacoes && <p className="mt-2 text-sm text-slate-400">{item.observacoes}</p>}
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {(['AGENDADO', 'CONCLUIDO', 'FALTOU', 'CANCELADO'] as AgendamentoStatus[]).map((status) => (
-                                <Button
-                                  key={status}
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => updateAgendamentoStatus(item, status)}
-                                  className={cn(
-                                    'border-white/20 hover:border-lime-400 hover:text-lime-300',
-                                    item.status === status && 'border-lime-400/60 text-lime-300'
-                                  )}
-                                >
-                                  {AGENDA_STATUS_LABEL[status]}
-                                </Button>
-                              ))}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedAgendamento(item);
-                                  setIsAgendaOpen(true);
-                                }}
-                                className="border-white/20 hover:border-lime-400 hover:text-lime-300"
-                              >
-                                Detalhes
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <AgendaUnificada
+            alunos={state.rows}
+            agendamentos={state.agendamentos}
+            faturas={state.faturas}
+            horarios={state.horarios}
+            horariosIndisponiveis={state.horariosIndisponiveis}
+            searchTerm={state.searchTerm}
+            today={getNowSaoPaulo().isoDate}
+            paymentSavingId={paymentSavingId}
+            actionError={agendaActionError ?? financialActionError}
+            onMarcar={marcarOcorrencia}
+            onAbrirAula={(id) => {
+              const row = state.agendamentos.find((item) => item.id === id);
+              if (row) {
+                setSelectedAgendamento(row);
+                setIsAgendaOpen(true);
+              }
+            }}
+            onAulaAvulsa={(date) => openAgendaCreate(date)}
+            onNovoHorario={() => setHorarioModal({ open: true, horario: null })}
+            onEditarHorario={(horario) => setHorarioModal({ open: true, horario })}
+            onBaixa={markAsPaid}
+            chargeLink={(alunoId) => {
+              const aluno = state.rows.find((row) => row.id === alunoId);
+              return aluno ? buildPrefilledWhatsAppLink(aluno, 'charge') : '';
+            }}
+          />
         )}
         </div>
         </div>
@@ -1364,6 +1155,27 @@ export default function AdminDashboard() {
           </DialogContent>
         </Dialog>
       </AnimatePresence>
+
+      <Dialog open={horarioModal.open} onOpenChange={(open) => !open && setHorarioModal({ open: false, horario: null })}>
+        <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-white/10 bg-brand-surface">
+          <div className="sr-only">
+            <DialogTitle>{horarioModal.horario ? 'Editar horário fixo' : 'Novo horário fixo'}</DialogTitle>
+            <DialogDescription>Defina os dias e o horário em que o aluno treina toda semana.</DialogDescription>
+          </div>
+          {horarioModal.open && (
+            <HorarioFixoModal
+              horario={horarioModal.horario}
+              alunos={state.rows}
+              today={getNowSaoPaulo().isoDate}
+              onClose={() => setHorarioModal({ open: false, horario: null })}
+              onSaved={(row) => {
+                syncHorarioRow(row);
+                setHorarioModal({ open: false, horario: null });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AnimatePresence>
         <Dialog
