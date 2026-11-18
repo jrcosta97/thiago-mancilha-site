@@ -1,10 +1,7 @@
 import { WHATSAPP_NUMBER } from '@/lib/contact';
-import { motion } from 'framer-motion';
 import {
-  Check, MessageCircle, CalendarDays, Zap, Users, Globe2, Crown, ArrowRight,
+  MessageCircle, CalendarDays, Users, Globe2, Crown, ArrowRight,
 } from 'lucide-react';
-import { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   Carousel,
   CarouselContent,
@@ -25,7 +22,6 @@ const plans = [
     tagline: 'A experiência mais personalizada',
     price: 1500,
     badge: 'Mais Procurado',
-    badgeColor: '!bg-accent !text-background',
     highlight: true,
     icon: Crown,
     image: '/assets/plano-presencial.webp',
@@ -47,7 +43,6 @@ const plans = [
     price: 1000,
     suffix: '/pessoa',
     badge: 'Econômico',
-    badgeColor: '!bg-blue-500/15 !text-blue-400 !border !border-blue-400/30',
     icon: Users,
     image: '/assets/plano-anual.webp',
     features: [
@@ -67,7 +62,6 @@ const plans = [
     tagline: 'Para quem quer transformar o treino em rotina',
     price: 900,
     badge: 'Melhor Custo-Benefício',
-    badgeColor: '!bg-accent-orange/15 !text-accent-orange !border !border-accent-orange/30',
     icon: CalendarDays,
     image: '/assets/extra.webp',
     features: [
@@ -88,7 +82,6 @@ const plans = [
     tagline: 'Seu treinamento planejado, onde quer que você esteja',
     price: 500,
     badge: 'Brasil Todo',
-    badgeColor: '!bg-emerald-500/15 !text-emerald-400 !border !border-emerald-400/30',
     icon: Globe2,
     image: '/assets/plano-online.webp',
     features: [
@@ -117,7 +110,7 @@ const buildWhatsAppLink = (planName: string, price: number) => {
 
 export default function PlansCarousel({ onCTAClick }: PlansCarouselProps) {
   return (
-    <div className="relative max-w-7xl mx-auto px-8 sm:px-12 lg:px-16">
+    <div className="relative">
       <Carousel
         opts={{
           align: 'start',
@@ -127,121 +120,100 @@ export default function PlansCarousel({ onCTAClick }: PlansCarouselProps) {
         }}
         className="w-full"
       >
-        <CarouselContent className="-ml-2 sm:-ml-3 lg:-ml-4">
-          {plans.map((plan, i) => {
+        <CarouselContent className="-ml-3 lg:-ml-4">
+          {plans.map((plan) => {
             const Icon = plan.icon;
             return (
               <CarouselItem
                 key={plan.name}
-                className="basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 p-2 sm:p-3 lg:p-4"
+                className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 pl-3 lg:pl-4 py-2"
               >
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-80px' }}
-                  transition={{ duration: 0.55, delay: i * 0.09 }}
-                  className="h-full flex min-w-0"
+                <article
+                  className={`relative h-full flex flex-col chamfer-sm bg-brand-surface border ${
+                    plan.highlight ? 'border-brand-blue' : 'border-white/10'
+                  }`}
                 >
-                  <Card
-                    className={`relative w-full h-full flex flex-col justify-between !rounded-3xl !bg-card overflow-hidden transition-all duration-300 ${
-                      plan.highlight
-                        ? '!border-accent/60 ring-2 ring-accent/40 shadow-[0_0_40px_rgba(204,255,0,0.18)] md:scale-[1.02] md:-translate-y-2'
-                        : '!border-white/6 hover:!border-white/15 hover:!shadow-card'
-                    }`}
-                  >
-                    <CardHeader className="!p-0 relative overflow-hidden">
-                      <div className="relative h-48 overflow-hidden">
-                        <img
-                          src={plan.image}
-                          alt={`Plano ${plan.name}`}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
-                        <div className="absolute top-3 right-3 flex gap-2">
-                          <Badge className={`h-6 px-3 text-[11px] font-bold uppercase tracking-wide shadow-md ${plan.badgeColor}`}>
-                            {plan.highlight && <Zap className="w-3 h-3 mr-0.5" fill="currentColor" strokeWidth={0} />}
-                            {plan.badge}
-                          </Badge>
-                        </div>
-                        <div className="absolute bottom-3 left-4 flex items-center gap-2">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${plan.highlight ? 'bg-accent/20 text-accent border-accent/30' : 'bg-white/5 text-accent border-white/10'}`}>
-                            <Icon className="w-4.5 h-4.5" strokeWidth={2.2} />
-                          </div>
-                        </div>
-                      </div>
+                  <div className="relative h-44 overflow-hidden">
+                    <img
+                      src={plan.image}
+                      alt={`Plano ${plan.name}`}
+                      className="photo-treated w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div aria-hidden="true" className="absolute inset-0 photo-tint" />
+                    <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-brand-surface via-brand-surface/30 to-transparent" />
+                    <span
+                      className={`absolute top-4 right-0 pl-5 pr-4 py-1.5 text-[0.72rem] font-bold tracking-[0.16em] uppercase [clip-path:polygon(10px_0,100%_0,100%_100%,0_100%)] ${
+                        plan.highlight ? 'bg-brand-blue text-white' : 'bg-brand-bg/90 text-brand-ink'
+                      }`}
+                    >
+                      {plan.badge}
+                    </span>
+                    <span className={`absolute bottom-3 left-5 grid place-items-center w-10 h-10 border ${plan.highlight ? 'bg-brand-blue border-brand-blue text-white' : 'bg-brand-bg/80 border-white/20 text-brand-blue-text'}`}>
+                      <Icon className="w-5 h-5" strokeWidth={2} aria-hidden="true" />
+                    </span>
+                  </div>
 
-                      <div className="px-5 sm:px-6 pt-5 pb-3 space-y-1.5">
-                        <CardTitle className="font-display font-black text-text-primary text-xl sm:text-2xl leading-tight">
-                          {plan.name}
-                        </CardTitle>
-                        <CardDescription className="text-text-secondary text-sm sm:text-base leading-relaxed">
-                          {plan.tagline}
-                        </CardDescription>
-                      </div>
-                    </CardHeader>
+                  <div className="px-5 sm:px-6 pt-4 space-y-1.5">
+                    <h3 className="title-display text-[1.75rem] text-brand-ink">{plan.name}</h3>
+                    <p className="text-brand-muted text-base leading-snug">{plan.tagline}</p>
+                  </div>
 
-                    <CardContent className="px-5 sm:px-6 pt-3 flex flex-col !gap-4 flex-1">
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-display font-extrabold text-text-primary text-2xl lg:text-3xl tracking-tight whitespace-nowrap">
+                  <div className="px-5 sm:px-6 pt-5 flex flex-col gap-4 flex-1">
+                    <div className="pb-4 border-b border-white/10">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="title-display !not-italic text-[2.4rem] text-brand-ink whitespace-nowrap">
                           {formatCurrency(plan.price)}
                         </span>
                         {plan.suffix && (
-                          <span className="text-text-muted text-xs sm:text-sm font-medium whitespace-nowrap">
-                            {plan.suffix}
-                          </span>
+                          <span className="text-brand-muted text-sm font-medium whitespace-nowrap">{plan.suffix}</span>
                         )}
                       </div>
-                      <span className="text-xs text-text-muted uppercase tracking-widest">por mês</span>
+                      <span className="text-xs font-semibold text-brand-subtle uppercase tracking-[0.2em]">por mês</span>
+                    </div>
 
-                      <ul className="space-y-2.5 pt-2 flex-1">
-                        {plan.features.map((f) => (
-                          <li key={f} className="flex items-start gap-2.5 text-sm text-text-secondary leading-snug">
-                            <div className="w-5 h-5 rounded-md bg-accent/15 flex items-center justify-center shrink-0 mt-0.5">
-                              <Check className="w-3.5 h-3.5 text-accent" strokeWidth={3} />
-                            </div>
-                            <span>{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
+                    <ul className="space-y-2.5 flex-1">
+                      {plan.features.map((f) => (
+                        <li key={f} className="flex items-start gap-3 text-[0.95rem] text-brand-ink/85 leading-snug">
+                          <span aria-hidden="true" className="mt-[0.45rem] w-2 h-2 shrink-0 bg-brand-blue-text skew-x-[-20deg]" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-                    <CardFooter className="!mt-auto !px-0 !pb-0 !pt-0 flex-col !gap-0 !border-t-0 !bg-transparent">
-                      <div className="px-5 sm:px-6 py-5 w-full flex flex-col gap-2.5 border-t border-white/5 mt-auto">
-                        <a
-                          href={buildWhatsAppLink(plan.name, plan.price)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group/button inline-flex shrink-0 items-center justify-center gap-2 w-full h-12 rounded-2xl px-4 text-sm font-extrabold bg-[#25D366] hover:bg-[#1ebe5b] text-white shadow-[0_6px_25px_rgba(37,211,102,0.45)] whitespace-nowrap outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px transition-all duration-200 [&_svg]:pointer-events-none [&_svg]:shrink-0"
-                        >
-                          <MessageCircle className="w-[18px] h-[18px]" strokeWidth={2.3} fill="currentColor" />
-                          Quero esse plano
-                          <ArrowRight className="w-4 h-4 group-hover/button:translate-x-0.5 transition-transform" strokeWidth={2.5} />
-                        </a>
-                        <button
-                          onClick={onCTAClick}
-                          type="button"
-                          className="w-full h-11 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 bg-white/4 border border-white/8 text-slate-200 hover:bg-white/8 hover:border-accent/40 hover:text-accent transition-all duration-200 backdrop-blur"
-                        >
-                          <CalendarDays className="w-4 h-4" strokeWidth={2.2} />
-                          Preencher Ficha de Avaliação
-                        </button>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                </motion.div>
+                  <div className="px-5 sm:px-6 py-5 mt-5 flex flex-col gap-2.5 border-t border-white/10">
+                    <a
+                      href={buildWhatsAppLink(plan.name, plan.price)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-brand group w-full !text-[1.05rem] !px-4"
+                    >
+                      <MessageCircle className="w-5 h-5" strokeWidth={2.3} aria-hidden="true" />
+                      Quero esse plano
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} aria-hidden="true" />
+                    </a>
+                    <button onClick={onCTAClick} type="button" className="btn-outline-brand w-full !min-h-[2.9rem] !text-[0.95rem]">
+                      <CalendarDays className="w-4 h-4 text-brand-blue-text" strokeWidth={2.2} aria-hidden="true" />
+                      Preencher Ficha de Avaliação
+                    </button>
+                  </div>
+                </article>
               </CarouselItem>
             );
           })}
         </CarouselContent>
 
-        <CarouselPrevious
-          className="hidden md:inline-flex -left-2 lg:-left-6 xl:-left-10 !w-11 !h-11 !bg-card/95 !border-white/15 !text-text-primary hover:!bg-accent hover:!text-background hover:!border-accent/60 backdrop-blur-md shadow-lg"
-          aria-label="Planos anteriores"
-        />
-        <CarouselNext
-          className="hidden md:inline-flex -right-2 lg:-right-6 xl:-right-10 !w-11 !h-11 !bg-card/95 !border-white/15 !text-text-primary hover:!bg-accent hover:!text-background hover:!border-accent/60 backdrop-blur-md shadow-lg"
-          aria-label="Próximos planos"
-        />
+        <div className="hidden md:flex justify-end gap-2 mt-6">
+          <CarouselPrevious
+            className="!static !translate-y-0 !w-12 !h-12 !rounded-none !bg-transparent !border-white/25 !text-brand-ink hover:!bg-brand-blue hover:!border-brand-blue"
+            aria-label="Planos anteriores"
+          />
+          <CarouselNext
+            className="!static !translate-y-0 !w-12 !h-12 !rounded-none !bg-transparent !border-white/25 !text-brand-ink hover:!bg-brand-blue hover:!border-brand-blue"
+            aria-label="Próximos planos"
+          />
+        </div>
       </Carousel>
     </div>
   );
