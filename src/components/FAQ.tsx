@@ -6,7 +6,9 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '@/components/ui/accordion';
+import { m } from 'framer-motion';
 import SectionLabel from '@/components/brand/SectionLabel';
+import { Reveal, EASE_OUT } from '@/components/motion/primitives';
 
 
 
@@ -99,9 +101,11 @@ export default function FAQ({ onCTAClick }: FAQProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
           <div className="space-y-5 lg:sticky lg:top-28 self-start">
             <SectionLabel>FAQ</SectionLabel>
+            <Reveal direction="diagonal">
             <h2 className="title-display text-5xl sm:text-6xl text-brand-ink">
               Tire suas dúvidas antes de começar
             </h2>
+            </Reveal>
             <p className="text-lg text-brand-muted">
               Respostas diretas para as dúvidas mais comuns antes de iniciar.
             </p>
@@ -145,15 +149,36 @@ export default function FAQ({ onCTAClick }: FAQProps) {
       {/* Faixa azul inclinada de contato */}
       <section aria-labelledby="cta-duvidas" className="relative py-6 md:py-10 bg-brand-bg overflow-hidden">
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div aria-hidden="true" className="absolute inset-y-0 left-0 right-0 mx-2 sm:mx-4 bg-brand-blue -skew-x-[10deg]" />
+          <m.div
+            aria-hidden="true"
+            className="absolute inset-y-0 left-0 right-0 mx-2 sm:mx-4 bg-brand-blue"
+            style={{ originX: 0 }}
+            initial={{ scaleX: 0, skewX: -10 }}
+            whileInView={{ scaleX: 1, skewX: -10 }}
+            viewport={{ once: true, amount: 0.5 }}
+            transition={{ duration: 0.7, ease: [0.76, 0, 0.24, 1] }}
+          />
           <div className="relative grid md:grid-cols-[auto_1fr_auto] items-center gap-6 md:gap-10 px-6 sm:px-12 py-10 md:py-12">
-            <h3 id="cta-duvidas" className="title-display text-5xl sm:text-6xl text-white">
+            <m.h3
+              id="cta-duvidas"
+              className="title-display text-5xl sm:text-6xl text-white"
+              initial={{ opacity: 0, x: -40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.55, delay: 0.4, ease: EASE_OUT }}
+            >
               Ainda tem dúvidas?
-            </h3>
-            <p className="text-white/90 text-lg leading-relaxed md:border-l md:border-white/40 md:pl-8 max-w-md">
+            </m.h3>
+            <m.p
+              className="text-white/90 text-lg leading-relaxed md:border-l md:border-white/40 md:pl-8 max-w-md"
+              initial={{ opacity: 0, x: -24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.5, delay: 0.52, ease: EASE_OUT }}
+            >
               Estamos a uma mensagem de distância para te ajudar a tomar a melhor decisão. Resposta rápida em minutos durante horário comercial.
-            </p>
-            <div className="flex flex-col gap-3">
+            </m.p>
+            <Reveal delay={0.62} direction="right" amount={0.5} className="flex flex-col gap-3">
               <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="btn-brand btn-brand-light group">
                 <MessageCircle className="w-5 h-5" strokeWidth={2.4} aria-hidden="true" />
                 Falar no WhatsApp
@@ -163,7 +188,7 @@ export default function FAQ({ onCTAClick }: FAQProps) {
                 <CalendarDays className="w-4 h-4" strokeWidth={2.2} aria-hidden="true" />
                 Preencher Ficha de Avaliação
               </button>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>

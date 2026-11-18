@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react';
 import SectionLabel from '@/components/brand/SectionLabel';
+import { Reveal, SlabIn } from '@/components/motion/primitives';
 
 const PlansCarousel = lazy(() => import('@/components/PlansCarousel'));
 
@@ -48,18 +49,22 @@ function PlansSkeleton() {
 export default function Plans({ onCTAClick }: PlansProps) {
   return (
     <section id="servicos" className="relative py-20 md:py-28 bg-brand-surface/40 border-t border-white/10 overflow-hidden scroll-mt-20">
-      <div aria-hidden="true" className="pointer-events-none absolute -left-20 top-0 w-[260px] h-[120px] bg-brand-blue -skew-x-[32deg] opacity-90 hidden md:block" />
+      <SlabIn inView skew={-32} from="left" className="pointer-events-none absolute -left-20 top-0 w-[260px] h-[120px] bg-brand-blue/90 hidden md:block" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="max-w-3xl mb-12 md:mb-14 space-y-5">
           <SectionLabel>Planos &amp; Investimento</SectionLabel>
+          <Reveal direction="diagonal">
           <h2 className="title-display text-5xl sm:text-6xl text-brand-ink">
             O investimento <span className="text-brand-blue-text">certo</span> para a sua saúde
           </h2>
+          </Reveal>
+          <Reveal delay={0.12}>
           <p className="text-brand-muted text-lg leading-relaxed">
             Valores pensados para ser um compromisso com resultados sustentáveis. Nada de assinaturas abusivas,
             contratos longos ou pegadinhas — só acompanhamento humano, próximo e de verdade.
           </p>
+          </Reveal>
         </div>
 
         <Suspense fallback={<PlansSkeleton />}>

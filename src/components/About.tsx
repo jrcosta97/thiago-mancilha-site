@@ -3,6 +3,7 @@ import {
   Handshake, ShieldCheck, ClipboardCheck, Users,
 } from 'lucide-react';
 import SectionLabel, { Slashes } from '@/components/brand/SectionLabel';
+import { Reveal, Stagger, StaggerItem, PhotoWipe, SettleImage } from '@/components/motion/primitives';
 
 const academicEducation = [
   { icon: GraduationCap, title: 'Bacharelado + Licenciatura', text: 'Educação Física pela UniNorte (formação dupla)' },
@@ -35,7 +36,9 @@ export default function About() {
           <div className="relative order-2 lg:order-1 lg:sticky lg:top-28">
             <div aria-hidden="true" className="absolute -left-3 -bottom-3 w-1/2 h-1/2 border-l-[3px] border-b-[3px] border-brand-blue" />
             <div className="relative chamfer overflow-hidden bg-brand-surface">
-              <img
+              <PhotoWipe inView />
+              <SettleImage
+                inView
                 src="/assets/sobre.webp"
                 alt="Thiago Mancilha Reis - Personal Trainer CREF 008289-G/AM"
                 className="photo-treated w-full h-[520px] sm:h-[600px] object-cover"
@@ -57,11 +60,13 @@ export default function About() {
           <div className="order-1 lg:order-2 space-y-6">
             <SectionLabel>Sobre o profissional</SectionLabel>
 
+            <Reveal direction="diagonal">
             <h2 className="title-display text-5xl sm:text-6xl lg:text-[4rem]">
               <span className="text-brand-ink">Olá, eu sou</span>
               <br />
               <span className="text-brand-blue-text">Thiago Mancilha Reis</span>
             </h2>
+            </Reveal>
 
             <p className="text-brand-ink font-semibold text-lg">
               Educação Física · Bacharel e Licenciado (UniNorte) · CREF 008289-G/AM
@@ -99,29 +104,29 @@ export default function About() {
 
             <div className="pt-2">
               <h3 className="title-display text-2xl text-brand-ink mb-4">Certificações</h3>
-              <ul className="grid sm:grid-cols-2 gap-3">
+              <Stagger as="ul" className="grid sm:grid-cols-2 gap-3">
                 {certifications.map((c) => (
-                  <li key={c.title} className="chamfer-sm flex items-start gap-3 px-4 py-3.5 bg-brand-surface border-l-2 border-brand-blue">
+                  <StaggerItem as="li" key={c.title} className="chamfer-sm flex items-start gap-3 px-4 py-3.5 bg-brand-surface border-l-2 border-brand-blue">
                     <c.icon className="w-5 h-5 text-brand-blue-text shrink-0 mt-0.5" strokeWidth={1.9} aria-hidden="true" />
                     <span className="text-base text-brand-ink/90 leading-snug">{c.title}</span>
-                  </li>
+                  </StaggerItem>
                 ))}
-              </ul>
+              </Stagger>
             </div>
           </div>
         </div>
 
         {/* Diferenciais em grade, como no mockup */}
-        <ul className="mt-16 md:mt-20 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Stagger as="ul" stagger={0.1} className="mt-16 md:mt-20 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {highlights.map((h) => (
-            <li key={h.label} className="flex items-center gap-4 p-5 border border-white/12 bg-brand-surface/60">
+            <StaggerItem as="li" key={h.label} className="flex items-center gap-4 p-5 border border-white/12 bg-brand-surface/60">
               <span className="grid place-items-center w-12 h-12 shrink-0 bg-brand-blue/15 border border-brand-blue/40">
                 <h.icon className="w-6 h-6 text-brand-blue-text" strokeWidth={1.9} aria-hidden="true" />
               </span>
               <span className="title-display !text-[1.2rem] !leading-tight !not-italic !font-bold text-brand-ink">{h.label}</span>
-            </li>
+            </StaggerItem>
           ))}
-        </ul>
+        </Stagger>
       </div>
     </section>
   );

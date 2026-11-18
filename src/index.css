@@ -415,3 +415,20 @@ html.brand-admin select:focus-visible,
 html.brand-admin textarea:focus-visible {
   border-color: #6A91FF;
 }
+
+/* --- Movimento: brilho diagonal ao passar o mouse nos botões ------------ */
+.btn-brand { overflow: hidden; }
+.btn-brand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+  transform: translateX(-120%);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.btn-brand:hover::after { transform: translateX(120%); }
+@media (prefers-reduced-motion: reduce) {
+  .btn-brand::after { display: none; }
+  html { scroll-behavior: auto; }
+}

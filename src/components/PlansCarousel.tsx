@@ -1,4 +1,5 @@
 import { WHATSAPP_NUMBER } from '@/lib/contact';
+import { Reveal } from '@/components/motion/primitives';
 import {
   MessageCircle, CalendarDays, Users, Globe2, Crown, ArrowRight,
 } from 'lucide-react';
@@ -121,13 +122,14 @@ export default function PlansCarousel({ onCTAClick }: PlansCarouselProps) {
         className="w-full"
       >
         <CarouselContent className="-ml-3 lg:-ml-4">
-          {plans.map((plan) => {
+          {plans.map((plan, i) => {
             const Icon = plan.icon;
             return (
               <CarouselItem
                 key={plan.name}
                 className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 pl-3 lg:pl-4 py-2"
               >
+                <Reveal direction="diagonal" delay={i * 0.09} amount={0.15} className="h-full">
                 <article
                   className={`relative h-full flex flex-col chamfer-sm bg-brand-surface border ${
                     plan.highlight ? 'border-brand-blue' : 'border-white/10'
@@ -199,6 +201,7 @@ export default function PlansCarousel({ onCTAClick }: PlansCarouselProps) {
                     </button>
                   </div>
                 </article>
+                </Reveal>
               </CarouselItem>
             );
           })}

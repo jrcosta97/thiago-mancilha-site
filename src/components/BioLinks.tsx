@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ArrowUpRight, Globe, MapPin } from 'lucide-react';
 import { Slashes } from '@/components/brand/SectionLabel';
+import { Reveal, Stagger, StaggerItem, SlabIn, SettleImage, WordsRise, SlashesIn } from '@/components/motion/primitives';
 
 
 
@@ -37,30 +38,33 @@ export default function BioLinks() {
   return (
     <main className="min-h-screen bg-[#07090F] text-brand-ink font-barlow">
       <div className="relative mx-auto min-h-screen w-full max-w-md overflow-hidden bg-brand-bg sm:border-x sm:border-white/10">
-        <div aria-hidden="true" className="pointer-events-none absolute -left-16 top-0 z-10 h-24 w-56 bg-brand-blue -skew-x-[40deg]" />
+        <SlabIn skew={-40} from="left" className="pointer-events-none absolute -left-16 top-0 z-10 h-24 w-56 bg-brand-blue" />
         <div aria-hidden="true" className="pointer-events-none absolute -left-6 top-24 z-10 h-[2px] w-40 bg-brand-blue-text/70 -rotate-[38deg] origin-left" />
 
         <div className="relative h-[360px] overflow-hidden sm:h-[400px]">
-          <img src="/assets/hero.webp" alt="Thiago Mancilha Reis" className="photo-treated h-full w-full object-cover object-[center_25%]" fetchPriority="high" />
+          <SettleImage src="/assets/hero.webp" alt="Thiago Mancilha Reis" className="photo-treated h-full w-full object-cover object-[center_25%]" fetchPriority="high" />
           <div aria-hidden="true" className="absolute inset-0 photo-tint" />
           <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-brand-bg via-brand-bg/30 to-transparent" />
         </div>
 
         <div className="relative -mt-24 px-5 pb-8 sm:px-7">
-          <span aria-hidden="true" className="title-display text-outline pointer-events-none absolute right-4 top-6 text-[7.5rem] leading-none select-none">01</span>
+          <Reveal onMount direction="right" delay={0.4} duration={0.8} className="pointer-events-none absolute right-4 top-6">
+            <span aria-hidden="true" className="title-display text-outline text-[7.5rem] leading-none select-none">01</span>
+          </Reveal>
 
           <p className="relative text-[0.78rem] font-bold uppercase tracking-[0.16em] text-brand-ink/90">Personal trainer · presencial e online</p>
           <h1 className="relative mt-3 title-display text-[3.4rem] sm:text-[3.8rem]">
-            Seu próximo passo<br /><span className="text-brand-blue-text">começa aqui.</span>
+            <WordsRise text="Seu próximo passo" delay={0.1} /><br /><WordsRise text="começa aqui." delay={0.25} className="text-brand-blue-text" />
           </h1>
           <p className="mt-4 max-w-sm text-lg leading-relaxed text-brand-muted">Treino personalizado para a sua rotina e os seus objetivos.</p>
           <p className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-brand-muted">
-            <Slashes className="text-base" />
+            <SlashesIn className="text-base" delay={0.35} />
             <span className="title-display !not-italic !font-bold text-lg text-brand-ink">Thiago Mancilha Reis</span>
             <span>· CREF 008289-G/AM</span>
           </p>
 
-          <nav aria-label="Formas de atendimento" className="mt-7 grid gap-3.5">
+          <Stagger as="nav" ariaLabel="Formas de atendimento" onMount delay={0.45} stagger={0.1} className="mt-7 grid gap-3.5">
+            <StaggerItem>
             <a href={presencialLink} target="_blank" rel="noopener noreferrer" className={`${linkBase} bg-brand-blue text-white hover:bg-brand-blue-hover`}>
               <LinkInner
                 icon={<MapPin className="h-6 w-6" aria-hidden="true" />}
@@ -69,6 +73,8 @@ export default function BioLinks() {
                 trailing={<ArrowUpRight className="h-6 w-6" aria-hidden="true" />}
               />
             </a>
+            </StaggerItem>
+            <StaggerItem>
             <a href={onlineLink} target="_blank" rel="noopener noreferrer" className={`${linkBase} border border-white/30 text-brand-ink hover:border-brand-blue-text`}>
               <LinkInner
                 icon={<Globe className="h-6 w-6 text-brand-muted" aria-hidden="true" />}
@@ -77,6 +83,8 @@ export default function BioLinks() {
                 trailing={<ArrowUpRight className="h-6 w-6 text-brand-muted group-hover:text-brand-blue-text" aria-hidden="true" />}
               />
             </a>
+            </StaggerItem>
+            <StaggerItem>
             <Link to="/" className={`${linkBase} border border-white/30 text-brand-ink hover:border-brand-blue-text`}>
               <LinkInner
                 icon={<ArrowUpRight className="h-6 w-6 text-brand-muted" aria-hidden="true" />}
@@ -85,7 +93,8 @@ export default function BioLinks() {
                 trailing={<ArrowRight className="h-6 w-6 text-brand-muted group-hover:text-brand-blue-text" aria-hidden="true" />}
               />
             </Link>
-          </nav>
+            </StaggerItem>
+          </Stagger>
 
           <footer className="mt-8 flex items-center gap-4 text-sm text-brand-subtle">
             <Slashes className="text-sm shrink-0" />
