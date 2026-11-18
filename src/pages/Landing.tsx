@@ -3,7 +3,6 @@ import Header from '@/components/Header';
 import Hero from '@/components/Hero';
 import About from '@/components/About';
 import Plans from '@/components/Plans';
-import Results from '@/components/Results';
 import TDEECalculator from '@/components/TDEECalculator';
 import FAQ from '@/components/FAQ';
 import Footer from '@/components/Footer';
@@ -19,7 +18,6 @@ export default function Landing() {
         <Hero onCTAClick={() => setAnamnesisOpen(true)} />
         <About />
         <Plans onCTAClick={() => setAnamnesisOpen(true)} />
-        <Results />
         <TDEECalculator />
         <FAQ onCTAClick={() => setAnamnesisOpen(true)} />
       </main>

@@ -1,17 +1,16 @@
+import { WHATSAPP_DISPLAY, WHATSAPP_NUMBER } from '@/lib/contact';
 import {
-  Award, MessageCircle, MapPin, Instagram, Facebook,
+  Award, MessageCircle, MapPin,
   Dumbbell, Heart, CalendarClock, Phone, ShieldCheck,
 } from 'lucide-react';
 
-const WHATSAPP_NUMBER = '5548988720439';
+
 const whatsappMsg = encodeURIComponent('Olá Thiago! Vim do rodapé do site e quero conhecer melhor seu trabalho.');
 const whatsappLink = `https://api.whatsapp.com/send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${whatsappMsg}`;
 
 const footerLinks = [
   { label: 'Sobre o Thiago', href: '#sobre' },
   { label: 'Planos', href: '#servicos' },
-  { label: 'Resultados', href: '#resultados' },
-  { label: 'Conteúdo', href: '#conteudo' },
   { label: 'Calculadora TDEE', href: '#tdee' },
   { label: 'FAQ', href: '#faq' },
 ];
@@ -75,24 +74,6 @@ export default function Footer() {
               >
                 <MessageCircle className="w-5 h-5" strokeWidth={2.3} />
               </a>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Instagram"
-                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-slate-200 flex items-center justify-center hover:scale-110 hover:text-accent hover:border-accent/40 transition-all"
-              >
-                <Instagram className="w-4.5 h-4.5" strokeWidth={2} />
-              </a>
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook"
-                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-slate-200 flex items-center justify-center hover:scale-110 hover:text-accent hover:border-accent/40 transition-all"
-              >
-                <Facebook className="w-4.5 h-4.5" strokeWidth={2} />
-              </a>
             </div>
           </div>
 
@@ -132,7 +113,7 @@ export default function Footer() {
                     rel="noopener noreferrer"
                     className="block font-display font-bold text-text-primary text-base sm:text-lg truncate hover:text-accent transition-colors"
                   >
-                    (48) 98872-0439
+                    {WHATSAPP_DISPLAY}
                   </a>
                 </div>
               </div>

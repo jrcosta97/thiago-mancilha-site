@@ -1,9 +1,10 @@
+import { WHATSAPP_NUMBER } from '@/lib/contact';
 import { motion } from 'framer-motion';
 import {
   Brain, Sparkles, Pill, Users, BookOpen, Lightbulb, MessageCircle, ArrowRight,
 } from 'lucide-react';
 
-const WHATSAPP_NUMBER = '5548988720439';
+
 
 const topics = [
   {

@@ -21,11 +21,11 @@ import { cn } from '@/lib/utils';
 
 const schema = z.object({
   email: z
-    .string({ required_error: 'Informe seu e-mail' })
+    .string({ error: 'Informe seu e-mail' })
     .email('Informe um e-mail válido')
     .trim(),
   password: z
-    .string({ required_error: 'Informe sua senha' })
+    .string({ error: 'Informe sua senha' })
     .min(6, 'Senha muito curta (mínimo 6 caracteres)'),
 });
 

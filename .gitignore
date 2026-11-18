@@ -14,3 +14,9 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Local work products and removed customer images
+.superpowers/
+artifacts/
+src/assets/temporariamente-removidos/
+supabase/.temp/

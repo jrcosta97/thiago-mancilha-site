@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Calendar, Dumbbell, Award } from 'lucide-react';
-import { BorderBeam } from '@/components/ui/BorderBeam';
 
 interface HeaderProps {
   onCTAClick: () => void;
@@ -19,9 +18,7 @@ export default function Header({ onCTAClick }: HeaderProps) {
 
   const navLinks = [
     { label: 'Sobre', href: '#sobre' },
-    { label: 'Conteúdo', href: '#conteudo' },
     { label: 'Planos', href: '#servicos' },
-    { label: 'Resultados', href: '#resultados' },
     { label: 'FAQ', href: '#faq' },
   ];
 

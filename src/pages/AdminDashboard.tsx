@@ -43,14 +43,16 @@ import {
   type AgendamentoStatus,
 } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { PIX_KEY } from '@/lib/contact';
+import { formatAgendaDateTime, toAgendaInstant } from '@/lib/agenda-dates';
+import { getStudentFinancialStatus, getMonthReference, type StudentFinancialStatus } from '@/lib/financial-rules';
 import { buildSheetCSV, buildWhatsAppLink, downloadCSV, formatWhatsApp } from '@/services/sheet-sync';
 
 const PAGE_SIZE = 10;
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as const;
-const AGENDA_HOURS = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
 
-type MainAdminTab = 'CRM' | 'AGENDA';
+type MainAdminTab = 'CRM' | 'FINANCEIRO' | 'AGENDA';
 
 const STATUS_COLOR: Record<AlunoStatus, string> = {
   NOVO_LEAD: 'bg-sky-400/15 text-sky-300 border-sky-400/40',
@@ -104,12 +106,14 @@ interface ManualAlunoFormState {
   mensalidade: string;
   dia_vencimento: string;
   status: AlunoStatus;
+  permuta: boolean;
 }
 
 interface CrmDraft {
   mensalidade: string;
   dia_vencimento: string;
   status: AlunoStatus;
+  permuta: boolean;
 }
 
 interface MetricCardData {
@@ -126,12 +130,14 @@ interface AgendaFormState {
   observacoes: string;
 }
 
-type FinancialStatus = 'PAGO' | 'PENDENTE' | 'ATRASADO' | 'NAO_APLICAVEL';
+type FinancialStatus = StudentFinancialStatus;
 
 const FIN_STATUS_LABEL: Record<FinancialStatus, string> = {
   PAGO: 'Pago',
   PENDENTE: 'Pendente',
   ATRASADO: 'Atrasado',
+  PERMUTA: 'Permuta',
+  NAO_CONFIGURADO: 'Não configurado',
   NAO_APLICAVEL: '—',
 };
 
@@ -139,6 +145,8 @@ const FIN_STATUS_CLASS: Record<FinancialStatus, string> = {
   PAGO: 'bg-emerald-400/15 text-emerald-200 border-emerald-400/35',
   PENDENTE: 'bg-amber-400/15 text-amber-200 border-amber-400/35',
   ATRASADO: 'bg-rose-400/15 text-rose-200 border-rose-400/35',
+  PERMUTA: 'bg-sky-400/15 text-sky-200 border-sky-400/35',
+  NAO_CONFIGURADO: 'bg-slate-500/10 text-slate-300 border-slate-500/20',
   NAO_APLICAVEL: 'bg-slate-500/10 text-slate-300 border-slate-500/20',
 };
 
@@ -164,6 +172,7 @@ const EMPTY_MANUAL_FORM: ManualAlunoFormState = {
   mensalidade: '',
   dia_vencimento: '',
   status: 'ATIVO',
+  permuta: false,
 };
 
 const EMPTY_AGENDA_FORM: AgendaFormState = {
@@ -188,6 +197,25 @@ const formatDateTimeBR = (value: string | null | undefined): string =>
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '—';
+
+const formatDateBR = (value: string | null | undefined): string =>
+  value
+    ? new Date(value).toLocaleDateString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
+    : '—';
+
+const formatTimeBR = (value: string | null | undefined): string =>
+  value
+    ? new Date(value).toLocaleTimeString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
         hour: '2-digit',
         minute: '2-digit',
       })
@@ -232,55 +260,38 @@ const getNowSaoPaulo = (): { year: number; month: number; day: number; isoDate: 
 
 const getCurrentMonthReference = (): string => {
   const now = getNowSaoPaulo();
-  return `${String(now.month).padStart(2, '0')}/${now.year}`;
+  return getMonthReference(now.year, now.month);
 };
 
-const getDueDateForCurrentMonth = (diaVencimento: number | null | undefined): string | null => {
-  if (!diaVencimento || !Number.isInteger(diaVencimento)) return null;
-  const now = getNowSaoPaulo();
-  const lastDay = new Date(now.year, now.month, 0).getDate();
-  const safeDay = Math.max(1, Math.min(diaVencimento, lastDay));
-  return `${now.year}-${String(now.month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
-};
+const formatMonthReference = (value: string | null | undefined): string => value || '—';
 
-const parseIsoDateParts = (value: string): { year: number; month: number; day: number } | null => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
-  if (!match) return null;
-  return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
+const monthReferenceToSortable = (value: string | null): number => {
+  const match = value ? /^(\d{2})\/(\d{4})$/.exec(value.trim()) : null;
+  if (!match) return -1;
+  return Number(match[2]) * 100 + Number(match[1]);
 };
-
-const formatMonthReference = (value: string): string => value || '—';
 
 const getWeekStart = (date: Date): Date => {
-  const result = new Date(date);
-  const day = result.getDay();
-  result.setHours(0, 0, 0, 0);
-  result.setDate(result.getDate() - day);
+  const result = new Date(`${toISODateLocal(date)}T12:00:00Z`);
+  const day = result.getUTCDay();
+  result.setUTCDate(result.getUTCDate() - day);
   return result;
 };
 
 const addDays = (date: Date, days: number): Date => {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
+  const result = new Date(`${toISODateLocal(date)}T12:00:00Z`);
+  result.setUTCDate(result.getUTCDate() + days);
   return result;
 };
 
 const toISODateLocal = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return formatAgendaDateTime(date.toISOString()).date;
 };
 
+const toAgendaDateTime = (date: string, hour: string): string => toAgendaInstant(date, hour);
+
 const getFinancialStatus = (aluno: AlunosRow): FinancialStatus => {
-  if (aluno.status !== 'ATIVO') return 'NAO_APLICAVEL';
-  if (!aluno.dia_vencimento || !Number.isInteger(aluno.dia_vencimento)) return 'NAO_APLICAVEL';
-
-  const now = getNowSaoPaulo();
-  const ultimo = aluno.ultimo_pagamento_data ? parseIsoDateParts(aluno.ultimo_pagamento_data) : null;
-
-  if (ultimo && ultimo.year === now.year && ultimo.month === now.month) return 'PAGO';
-  return now.day > aluno.dia_vencimento ? 'ATRASADO' : 'PENDENTE';
+  return getStudentFinancialStatus(aluno, getNowSaoPaulo());
 };
 
 const formatAgeLabel = (idade: number | null | undefined): string =>
@@ -311,13 +322,13 @@ const buildPrefilledWhatsAppLink = (aluno: AlunosRow, kind: 'welcome' | 'charge'
   const nome = aluno.nome.split(' ')[0] || aluno.nome;
   const message =
     kind === 'charge'
-      ? `Olá, ${nome}! Passando para lembrar da mensalidade${aluno.mensalidade != null ? ` no valor de ${formatCurrencyBR(aluno.mensalidade)}` : ''}${aluno.dia_vencimento ? ` com vencimento no dia ${aluno.dia_vencimento}` : ''}.\n\nChave PIX: [COLE_AQUI_A_CHAVE_PIX_DO_THIAGO]\n\nQualquer dúvida, me chama por aqui.`
+      ? `Olá, ${nome}! Passando para lembrar da mensalidade${aluno.mensalidade != null ? ` no valor de ${formatCurrencyBR(aluno.mensalidade)}` : ''}${aluno.dia_vencimento ? ` com vencimento no dia ${aluno.dia_vencimento}` : ''}.\n\nChave PIX: ${PIX_KEY}\n\nQualquer dúvida, me chama por aqui.`
       : `Olá, ${nome}! Seja bem-vindo(a). Recebi seu cadastro e quero te ajudar a organizar seus próximos passos. Me responde por aqui para alinharmos o atendimento.`;
   return `${base}${base.includes('?') ? '&' : '?'}text=${encodeURIComponent(message)}`;
 };
 
 const getQuickActionType = (aluno: AlunosRow): 'welcome' | 'charge' =>
-  isLeadStatus(aluno.status) ? 'welcome' : 'charge';
+  isLeadStatus(aluno.status) || aluno.permuta ? 'welcome' : 'charge';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -342,6 +353,9 @@ export default function AdminDashboard() {
   const [agendaSelectedDate, setAgendaSelectedDate] = useState<string>(() => toISODateLocal(new Date()));
   const [isAgendaOpen, setIsAgendaOpen] = useState(false);
   const [selectedAgendamento, setSelectedAgendamento] = useState<AgendamentosRow | null>(null);
+  const [agendaPrefillDate, setAgendaPrefillDate] = useState<string>(() => toISODateLocal(new Date()));
+  const [financialActionError, setFinancialActionError] = useState<string | null>(null);
+  const [paymentSavingId, setPaymentSavingId] = useState<string | null>(null);
 
   const supabaseOk = useMemo(() => isSupabaseConfigured(), []);
 
@@ -440,6 +454,12 @@ export default function AdminDashboard() {
     return filteredRows.slice(from, from + PAGE_SIZE);
   }, [filteredRows, state.page]);
 
+  const financialRows = useMemo(() => {
+    const term = normalizeText(state.searchTerm);
+    return state.rows.filter((row) => row.status === 'ATIVO' && (!term ||
+      [row.nome, row.whatsapp].map(normalizeText).join(' ').includes(term)));
+  }, [state.rows, state.searchTerm]);
+
   const tabCounts = useMemo(() => {
     return FILTER_TABS.reduce<Record<DashboardFilter, number>>((acc, tab) => {
       acc[tab.key] = state.rows.filter((row) => matchesFilter(row, tab.key)).length;
@@ -450,9 +470,13 @@ export default function AdminDashboard() {
   const metricCards = useMemo<MetricCardData[]>(() => {
     const leads = state.rows.filter((row) => isLeadStatus(row.status)).length;
     const ativos = state.rows.filter((row) => row.status === 'ATIVO');
-    const faturamento = ativos.reduce((sum, row) => sum + (row.mensalidade ?? 0), 0);
+    const faturamento = ativos.filter((row) => !row.permuta).reduce((sum, row) => sum + (Number(row.mensalidade) || 0), 0);
     const inativosPerdidos = state.rows.filter((row) => row.status === 'INATIVO' || row.status === 'PERDIDO').length;
     const atrasados = ativos.filter((row) => getFinancialStatus(row) === 'ATRASADO').length;
+    const mesAtual = getCurrentMonthReference();
+    const recebido = state.faturas
+      .filter((fatura) => fatura.mes_referencia === mesAtual && fatura.status === 'PAID')
+      .reduce((sum, fatura) => sum + fatura.valor, 0);
 
     return [
       {
@@ -466,9 +490,14 @@ export default function AdminDashboard() {
         helper: `${inativosPerdidos.toLocaleString('pt-BR')} registro(s) entre inativos e perdidos.`,
       },
       {
-        label: 'Faturamento mensal',
+        label: 'Mensalidades previstas',
         value: formatCurrencyBR(faturamento),
-        helper: 'A soma considera apenas registros com status ativo.',
+        helper: 'Previsão pela mensalidade dos alunos ativos; não representa valor recebido.',
+      },
+      {
+        label: 'Recebido neste mês',
+        value: formatCurrencyBR(recebido),
+        helper: 'Somente baixas registradas na competência atual.',
       },
       {
         label: 'Atrasados / vencidos',
@@ -476,7 +505,7 @@ export default function AdminDashboard() {
         helper: 'Apenas alunos ativos com pagamento atrasado no mês atual.',
       },
     ];
-  }, [state.rows]);
+  }, [state.rows, state.faturas]);
 
   const syncUpdatedRow = (updated: AlunosRow) => {
     setState((s) => ({
@@ -514,40 +543,27 @@ export default function AdminDashboard() {
 
   const markAsPaid = useCallback(
     async (alunoId: string) => {
-      const sb = getSupabase();
-      if (!sb) return;
-      const aluno = state.rows.find((row) => row.id === alunoId);
-      if (!aluno || aluno.status !== 'ATIVO') return;
-      const now = getNowSaoPaulo();
-      const mesReferencia = getCurrentMonthReference();
-      const [alunoRes, faturaRes] = await Promise.all([
-        sb
-        .from('alunos')
-        .update({ ultimo_pagamento_data: now.isoDate } as never)
-        .eq('id', alunoId)
-        .select()
-          .single(),
-        sb
-          .from('faturas')
-          .upsert(
-            {
-              aluno_id: alunoId,
-              mes_referencia: mesReferencia,
-              valor: aluno.mensalidade ?? 0,
-              data_vencimento: getDueDateForCurrentMonth(aluno.dia_vencimento),
-              data_pagamento: `${now.isoDate}T12:00:00-03:00`,
-              status: 'PAGO',
-              observacao: 'Baixa lançada manualmente no CRM',
-            } as never,
-            { onConflict: 'aluno_id,mes_referencia' }
-          )
-          .select()
-          .single(),
-      ]);
-      if (alunoRes.error) throw alunoRes.error;
-      if (faturaRes.error) throw faturaRes.error;
-      if (alunoRes.data) syncUpdatedRow(alunoRes.data as AlunosRow);
-      if (faturaRes.data) syncFaturaRow(faturaRes.data as FaturasRow);
+      setFinancialActionError(null);
+      setPaymentSavingId(alunoId);
+      try {
+        const sb = getSupabase();
+        if (!sb) throw new Error('Supabase indisponível.');
+        const aluno = state.rows.find((row) => row.id === alunoId);
+        if (!aluno || aluno.status !== 'ATIVO') throw new Error('Aluno ativo não encontrado.');
+        const result = await sb.rpc('record_current_month_payment' as never, { p_aluno_id: alunoId } as never) as unknown as {
+          data: { ok: boolean; aluno: AlunosRow; fatura: FaturasRow } | null;
+          error: unknown;
+        };
+        const { data, error } = result;
+        if (error) throw error;
+        if (!data?.ok || !data.aluno || !data.fatura) throw new Error('A baixa não retornou confirmação do banco.');
+        syncUpdatedRow(data.aluno);
+        syncFaturaRow(data.fatura);
+      } catch {
+        setFinancialActionError('Não foi possível confirmar a baixa no banco. Atualize o painel e tente novamente; nenhum sucesso foi informado.');
+      } finally {
+        setPaymentSavingId(null);
+      }
     },
     [state.rows]
   );
@@ -566,10 +582,33 @@ export default function AdminDashboard() {
     [agendaWeekStart]
   );
 
-  const agendamentosByDate = useMemo(() => {
+  const alunosById = useMemo(() => {
+    const map = new Map<string, AlunosRow>();
+    for (const row of state.rows) map.set(row.id, row);
+    return map;
+  }, [state.rows]);
+
+  const filteredAgendaRows = useMemo(() => {
+    const term = normalizeText(state.searchTerm);
+    return state.agendamentos.filter((item) => {
+      if (!term) return true;
+      const aluno = alunosById.get(item.aluno_id);
+      const haystack = [
+        aluno?.nome ?? '',
+        aluno?.whatsapp ?? '',
+        item.status,
+        item.observacoes ?? '',
+      ]
+        .map(normalizeText)
+        .join(' ');
+      return haystack.includes(term);
+    });
+  }, [alunosById, state.agendamentos, state.searchTerm]);
+
+  const filteredAgendaByDate = useMemo(() => {
     const map = new Map<string, AgendamentosRow[]>();
-    for (const item of state.agendamentos) {
-      const key = item.data_hora.slice(0, 10);
+    for (const item of filteredAgendaRows) {
+      const key = formatAgendaDateTime(item.data_hora).date;
       const list = map.get(key) ?? [];
       list.push(item);
       map.set(key, list);
@@ -578,12 +617,39 @@ export default function AdminDashboard() {
       list.sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
     }
     return map;
-  }, [state.agendamentos]);
+  }, [filteredAgendaRows]);
 
-  const selectedAgendaRows = useMemo(
-    () => agendamentosByDate.get(agendaSelectedDate) ?? [],
-    [agendaSelectedDate, agendamentosByDate]
+  const selectedAgendaRowsFiltered = useMemo(
+    () => filteredAgendaByDate.get(agendaSelectedDate) ?? [],
+    [agendaSelectedDate, filteredAgendaByDate]
   );
+
+  const openAgendaCreate = (date?: string) => {
+    const nextDate = date ?? agendaSelectedDate;
+    setAgendaPrefillDate(nextDate);
+    setSelectedAgendamento(null);
+    setIsAgendaOpen(true);
+  };
+
+  const handleAgendaSave = async (agendamento: AgendamentosRow) => {
+    syncAgendamentoRow(agendamento);
+    setAgendaSelectedDate(formatAgendaDateTime(agendamento.data_hora).date);
+    setIsAgendaOpen(false);
+    setSelectedAgendamento(null);
+  };
+
+  const updateAgendamentoStatus = async (agendamento: AgendamentosRow, status: AgendamentoStatus) => {
+    const sb = getSupabase();
+    if (!sb || agendamento.status === status) return;
+    const { data, error } = await sb
+      .from('agendamentos')
+      .update({ status } as never)
+      .eq('id', agendamento.id)
+      .select()
+      .single();
+    if (error) throw error;
+    if (data) syncAgendamentoRow(data as AgendamentosRow);
+  };
 
   const handleLogout = async () => {
     if (logoutLoading) return;
@@ -663,8 +729,7 @@ export default function AdminDashboard() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setSelectedAgendamento(null);
-                  setIsAgendaOpen(true);
+                  openAgendaCreate(agendaSelectedDate);
                 }}
                 className="inline-flex items-center gap-2 border-emerald-500/50 text-emerald-300 hover:border-emerald-400 hover:text-emerald-200"
               >
@@ -702,9 +767,11 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="mb-5 flex flex-wrap gap-2">
+        <div className="lg:grid lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-7">
+        <nav aria-label="Áreas do painel" className="mb-5 flex flex-wrap content-start gap-2 lg:mb-0 lg:flex-col">
           {([
-            { key: 'CRM', label: 'CRM' },
+            { key: 'CRM', label: 'Alunos e leads' },
+            { key: 'FINANCEIRO', label: 'Financeiro' },
             { key: 'AGENDA', label: 'Agenda' },
           ] as const).map((tab) => {
             const active = mainTab === tab.key;
@@ -712,7 +779,10 @@ export default function AdminDashboard() {
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setMainTab(tab.key)}
+                onClick={() => {
+                  setMainTab(tab.key);
+                  setState((s) => ({ ...s, searchTerm: '', page: 1 }));
+                }}
                 className={cn(
                   'inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all',
                   active
@@ -724,22 +794,26 @@ export default function AdminDashboard() {
               </button>
             );
           })}
-        </div>
+        </nav>
+
+        <div className="min-w-0">
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-5">
           <div>
             <h1 className="font-display font-black text-2xl sm:text-3xl tracking-tight text-foreground">
-              {mainTab === 'CRM' ? 'CRM de Gestão de Alunos' : 'Agenda de Aulas'}
+              {mainTab === 'CRM' ? 'Alunos e leads' : mainTab === 'FINANCEIRO' ? 'Financeiro' : 'Agenda de aulas'}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               {mainTab === 'CRM'
                 ? `Leads do site e alunos antigos centralizados em um só painel — ${total.toLocaleString('pt-BR')} registro(s) nesta visualização`
-                : `Visualize os treinos da semana e atualize presença em um só lugar — ${state.agendamentos.length.toLocaleString('pt-BR')} aula(s) carregada(s)`}
+                : mainTab === 'FINANCEIRO'
+                  ? 'Acompanhe as mensalidades e registre os pagamentos dos alunos ativos.'
+                  : `Visualize os treinos da semana e atualize presença em um só lugar — ${state.agendamentos.length.toLocaleString('pt-BR')} aula(s) carregada(s)`}
             </p>
           </div>
           <div className={cn('w-full', mainTab === 'CRM' ? 'sm:max-w-md' : 'sm:max-w-lg')}>
             <label htmlFor="q" className="block text-[11px] uppercase tracking-widest font-bold text-slate-400 mb-1.5">
-              {mainTab === 'CRM' ? 'Buscar aluno' : 'Buscar aluno na agenda'}
+              {mainTab === 'AGENDA' ? 'Buscar aluno na agenda' : 'Buscar aluno'}
             </label>
             <div className="relative">
               <Search className="w-4.5 h-4.5 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -747,7 +821,7 @@ export default function AdminDashboard() {
                 id="q"
                 type="search"
                 value={state.searchTerm}
-                placeholder={mainTab === 'CRM' ? 'Nome, WhatsApp, objetivo, origem...' : 'Filtre aulas por nome do aluno...'}
+                placeholder={mainTab === 'AGENDA' ? 'Filtre aulas por nome do aluno...' : 'Nome ou WhatsApp...'}
                 onChange={(e) => setState((s) => ({ ...s, page: 1, searchTerm: e.target.value }))}
                 className={cn(
                   'w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-foreground placeholder:text-slate-500',
@@ -758,9 +832,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {!state.initialLoad && mainTab === 'CRM' && (
-          <div className="mb-5 grid gap-3 md:grid-cols-4">
-            {metricCards.map((card) => (
+        {!state.initialLoad && mainTab !== 'AGENDA' && (
+          <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+            {(mainTab === 'CRM' ? [metricCards[0], metricCards[1], metricCards[2], metricCards[4]] : metricCards.slice(2)).map((card) => (
               <div
                 key={card.label}
                 className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4"
@@ -771,6 +845,11 @@ export default function AdminDashboard() {
               </div>
             ))}
           </div>
+        )}
+        {financialActionError && mainTab !== 'AGENDA' && (
+          <p role="alert" className="mb-5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            {financialActionError}
+          </p>
         )}
 
         {!supabaseOk && (
@@ -884,221 +963,33 @@ export default function AdminDashboard() {
 
         {!state.initialLoad && mainTab === 'CRM' && currentRows.length > 0 && (
           <>
-            <div className="hidden md:block rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-slate-900/90 text-left text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
-                      <th className="px-4 py-3 font-bold">Data</th>
-                      <th className="px-4 py-3 font-bold">Aluno</th>
-                      <th className="px-4 py-3 font-bold">WhatsApp</th>
-                      <th className="px-4 py-3 font-bold">Objetivo</th>
-                      <th className="px-4 py-3 font-bold">Mensalidade</th>
-                      <th className="px-4 py-3 font-bold">Venc.</th>
-                      <th className="px-4 py-3 font-bold">Financeiro</th>
-                      <th className="px-4 py-3 font-bold">Status</th>
-                      <th className="px-4 py-3 text-right font-bold pr-5">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentRows.map((aluno, idx) => {
-                      const quickAction = getQuickActionType(aluno);
-                      const quickLabel = quickAction === 'charge' ? 'Cobrar' : 'Boas-vindas';
-                      const finStatus = getFinancialStatus(aluno);
-                      return (
-                        <tr
-                          key={aluno.id}
-                          className={cn(
-                            'border-b border-slate-800/80 last:border-b-0 hover:bg-slate-800/40 transition-colors group',
-                            idx % 2 === 1 && 'bg-slate-950/30'
-                          )}
-                        >
-                          <td className="px-4 py-3 align-middle whitespace-nowrap text-xs text-slate-400 font-mono">
-                            {formatDateTimeBR(aluno.created_at)}
-                          </td>
-                          <td className="px-4 py-3 align-middle">
-                            <p className="font-semibold text-foreground leading-tight text-sm">{aluno.nome}</p>
-                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                              <span className="text-[11px] text-slate-500">{formatAgeLabel(aluno.idade)}</span>
-                              <span className="text-[11px] text-slate-500">• {getOrigemLabel(aluno.origem)}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 align-middle">
-                            <a
-                              href={aluno.whatsapp_link || buildWhatsAppLink(aluno.whatsapp)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-sm text-foreground hover:text-lime-400 transition-colors"
-                            >
-                              <MessageCircle className="w-4 h-4 text-lime-400/80" />
-                              <span className="font-mono tabular-nums">{aluno.whatsapp}</span>
-                            </a>
-                          </td>
-                          <td className="px-4 py-3 align-middle text-sm text-slate-200">
-                            {aluno.objetivo || '—'}
-                          </td>
-                          <td className="px-4 py-3 align-middle text-sm text-slate-200 font-medium">
-                            {formatCurrencyBR(aluno.mensalidade)}
-                          </td>
-                          <td className="px-4 py-3 align-middle text-sm text-slate-300">
-                            {aluno.dia_vencimento ? `Dia ${aluno.dia_vencimento}` : '—'}
-                          </td>
-                          <td className="px-4 py-3 align-middle">
-                            <Badge
-                              className={cn(
-                                'border rounded-full text-[11px] font-bold uppercase tracking-wider',
-                                FIN_STATUS_CLASS[finStatus]
-                              )}
-                            >
-                              {FIN_STATUS_LABEL[finStatus]}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 align-middle">
-                            <Badge
-                              className={cn(
-                                'border rounded-full text-[11px] font-bold uppercase tracking-wider',
-                                STATUS_COLOR[aluno.status] ?? STATUS_COLOR.ATIVO
-                              )}
-                            >
-                              {STATUS_LABEL[aluno.status] ?? aluno.status}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 align-middle text-right pr-5">
-                            <div className="flex items-center justify-end gap-2">
-                              {canConvertAluno(aluno.status) && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    setOpenConversionForId(aluno.id);
-                                    setSelected(aluno);
-                                  }}
-                                  className="inline-flex items-center gap-1.5 bg-emerald-500 text-black hover:bg-emerald-400"
-                                >
-                                  Converter em Aluno
-                                </Button>
-                              )}
-                              {aluno.status === 'ATIVO' && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => markAsPaid(aluno.id)}
-                                  disabled={finStatus === 'PAGO'}
-                                  className="inline-flex items-center gap-2 border-slate-700 hover:border-emerald-400 hover:text-emerald-300"
-                                >
-                                  <CreditCard className="w-4 h-4" />
-                                  {finStatus === 'PAGO' ? 'Pago' : 'Marcar pago'}
-                                </Button>
-                              )}
-                              <a
-                                href={buildPrefilledWhatsAppLink(aluno, quickAction)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex h-7 items-center gap-1 rounded-lg border border-lime-400/25 bg-lime-400/10 px-2.5 text-[11px] font-semibold text-lime-300 hover:border-lime-400/60"
-                              >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                {quickLabel}
-                              </a>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setSelected(aluno)}
-                                className="inline-flex items-center gap-1.5 text-slate-300 hover:text-lime-400 hover:bg-lime-400/10 focus-visible:ring-offset-2 focus-visible:ring-lime-400"
-                              >
-                                <ListTodo className="w-4 h-4" />
-                                Detalhes
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            <div className="mb-3 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-bold text-lg text-foreground">Pessoas cadastradas</h2>
+                <p className="text-sm text-muted-foreground">Abra a ficha para consultar dados e ações.</p>
               </div>
             </div>
-
-            <div className="md:hidden space-y-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
               {currentRows.map((aluno) => {
                 const quickAction = getQuickActionType(aluno);
                 const finStatus = getFinancialStatus(aluno);
                 return (
-                  <div
-                    key={aluno.id}
-                    className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div>
-                        <p className="font-bold text-foreground leading-tight">{aluno.nome}</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          {formatDateTimeBR(aluno.created_at)}
-                        </p>
-                      </div>
-                      <Badge
-                        className={cn(
-                          'border rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0',
-                          STATUS_COLOR[aluno.status] ?? STATUS_COLOR.ATIVO
-                        )}
-                      >
-                        {STATUS_LABEL[aluno.status] ?? aluno.status}
-                      </Badge>
+                  <div key={aluno.id} className="grid gap-3 border-b border-slate-800 px-4 py-4 last:border-b-0 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:px-5">
+                    <div className="min-w-0">
+                      <p className="break-words font-semibold text-foreground">{aluno.nome}</p>
+                      <p className="mt-1 text-xs text-slate-400">{getOrigemLabel(aluno.origem)} · {formatDateTimeBR(aluno.created_at)}</p>
+                      <p className="mt-1 text-xs text-slate-400">{aluno.whatsapp}</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
-                      <p><span className="text-slate-500">Origem:</span> {getOrigemLabel(aluno.origem)}</p>
-                      <p><span className="text-slate-500">Idade:</span> {formatAgeLabel(aluno.idade)}</p>
-                      <p className="col-span-2 font-mono"><span className="text-slate-500">WhatsApp:</span> {aluno.whatsapp}</p>
-                      <p><span className="text-slate-500">Mensalidade:</span> {formatCurrencyBR(aluno.mensalidade)}</p>
-                      <p><span className="text-slate-500">Venc.:</span> {aluno.dia_vencimento ? `Dia ${aluno.dia_vencimento}` : '—'}</p>
-                      <p className="col-span-2">
-                        <span className="text-slate-500">Financeiro:</span>{' '}
-                        <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', FIN_STATUS_CLASS[finStatus])}>
-                          {FIN_STATUS_LABEL[finStatus]}
-                        </span>
-                      </p>
-                      <p className="col-span-2"><span className="text-slate-500">Objetivo:</span> {aluno.objetivo || '—'}</p>
+                    <div>
+                      <Badge className={cn('border rounded-full text-[11px] font-bold uppercase tracking-wider', STATUS_COLOR[aluno.status] ?? STATUS_COLOR.ATIVO)}>{STATUS_LABEL[aluno.status] ?? aluno.status}</Badge>
+                      <p className="mt-1 break-words text-xs text-slate-400">{aluno.objetivo || 'Objetivo não informado'}</p>
                     </div>
-                    <div className="mt-3 flex flex-col gap-2">
-                      {canConvertAluno(aluno.status) && (
-                        <Button
-                          onClick={() => {
-                            setOpenConversionForId(aluno.id);
-                            setSelected(aluno);
-                          }}
-                          className="w-full bg-emerald-500 text-black hover:bg-emerald-400"
-                        >
-                          Converter em Aluno
-                        </Button>
-                      )}
-                      {aluno.status === 'ATIVO' && (
-                        <Button
-                          variant="outline"
-                          onClick={() => markAsPaid(aluno.id)}
-                          disabled={finStatus === 'PAGO'}
-                          className="w-full border-slate-700 hover:border-emerald-400 hover:text-emerald-300"
-                        >
-                          <span className="inline-flex items-center gap-2">
-                            <CreditCard className="w-4 h-4" />
-                            {finStatus === 'PAGO' ? 'Pago' : 'Marcar pago'}
-                          </span>
-                        </Button>
-                      )}
-                      <div className="flex items-center gap-2">
-                      <a
-                        href={buildPrefilledWhatsAppLink(aluno, quickAction)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-lime-400/25 bg-lime-400/10 px-3 py-2 text-xs font-semibold text-lime-300"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        {quickAction === 'charge' ? 'Cobrar' : 'Boas-vindas'}
-                      </a>
-                      <Button
-                        variant="outline"
-                        onClick={() => setSelected(aluno)}
-                        className="flex-1 border-slate-700 hover:border-lime-400 hover:text-lime-400"
-                      >
-                        Detalhes
-                      </Button>
-                      </div>
+                    <div className="text-sm text-slate-300">
+                      {isLeadStatus(aluno.status) ? <span>Próximo passo: entrar em contato</span> : aluno.status === 'ATIVO' ? aluno.permuta ? <span>Permuta · sem cobrança</span> : <><span>{formatCurrencyBR(aluno.mensalidade)} · {aluno.dia_vencimento ? `dia ${aluno.dia_vencimento}` : 'sem vencimento'}</span><p className="mt-1 text-xs text-slate-400">{FIN_STATUS_LABEL[finStatus]}</p></> : <span>Cadastro {STATUS_LABEL[aluno.status]?.toLowerCase() ?? aluno.status.toLowerCase()}</span>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                      <a href={buildPrefilledWhatsAppLink(aluno, quickAction)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-lime-400/25 bg-lime-400/10 px-3 text-xs font-semibold text-lime-300 hover:border-lime-400/60"><MessageCircle className="h-4 w-4" />{quickAction === 'charge' ? 'Cobrar' : 'Conversar'}</a>
+                      <Button variant="outline" size="sm" onClick={() => setSelected(aluno)} className="border-slate-700 hover:border-lime-400 hover:text-lime-400"><ListTodo className="mr-1.5 h-4 w-4" />Ver ficha</Button>
                     </div>
                   </div>
                 );
@@ -1148,6 +1039,270 @@ export default function AdminDashboard() {
             </div>
           </>
         )}
+
+        {!state.initialLoad && mainTab === 'FINANCEIRO' && (
+          <section aria-labelledby="financeiro-heading">
+            <div className="mb-3">
+              <h2 id="financeiro-heading" className="text-lg font-bold text-foreground">Mensalidades dos alunos ativos</h2>
+              <p className="text-sm text-muted-foreground">Consulte a situação do mês e registre pagamentos confirmados.</p>
+            </div>
+            {financialRows.length === 0 ? (
+              <p className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">Nenhum aluno ativo encontrado.</p>
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
+                {financialRows.map((aluno) => {
+                  const finStatus = getFinancialStatus(aluno);
+                  return (
+                    <div key={aluno.id} className="grid gap-3 border-b border-slate-800 px-4 py-4 last:border-b-0 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:px-5">
+                      <div className="min-w-0"><p className="break-words font-semibold text-foreground">{aluno.nome}</p><p className="mt-1 text-xs text-slate-400">{aluno.whatsapp}</p></div>
+                      <div className="text-sm text-slate-200"><p className="font-medium">{aluno.permuta ? 'Sem cobrança' : formatCurrencyBR(aluno.mensalidade)}</p><p className="mt-1 text-xs text-slate-400">{aluno.permuta ? 'Permuta de serviços' : aluno.dia_vencimento ? `Vence dia ${aluno.dia_vencimento}` : 'Vencimento não informado'}</p></div>
+                      <div><Badge className={cn('border rounded-full text-[11px] font-bold uppercase tracking-wider', FIN_STATUS_CLASS[finStatus])}>{FIN_STATUS_LABEL[finStatus]}</Badge></div>
+                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                        {!aluno.permuta && <><Button size="sm" variant="outline" onClick={() => markAsPaid(aluno.id)} disabled={finStatus === 'PAGO' || finStatus === 'NAO_CONFIGURADO' || paymentSavingId === aluno.id} className="border-slate-700 hover:border-emerald-400 hover:text-emerald-300"><CreditCard className="mr-1.5 h-4 w-4" />{finStatus === 'PAGO' ? 'Pago' : paymentSavingId === aluno.id ? 'Salvando…' : 'Marcar pago'}</Button>
+                        <a href={buildPrefilledWhatsAppLink(aluno, 'charge')} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-lime-400/25 bg-lime-400/10 px-3 text-xs font-semibold text-lime-300 hover:border-lime-400/60"><MessageCircle className="h-4 w-4" />Cobrar</a></>}
+                        <Button size="sm" variant="ghost" onClick={() => setSelected(aluno)} className="text-slate-300 hover:text-lime-400">Ver ficha</Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {!state.initialLoad && mainTab === 'AGENDA' && (
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 sm:p-5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAgendaWeekStart((current) => addDays(current, -7))}
+                    className="border-slate-700 hover:border-lime-400 hover:text-lime-400"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Semana anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const today = new Date();
+                      setAgendaWeekStart(getWeekStart(today));
+                      setAgendaSelectedDate(toISODateLocal(today));
+                    }}
+                    className="border-slate-700 hover:border-lime-400 hover:text-lime-400"
+                  >
+                    Hoje
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAgendaWeekStart((current) => addDays(current, 7))}
+                    className="border-slate-700 hover:border-lime-400 hover:text-lime-400"
+                  >
+                    Próxima semana
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant={agendaView === 'SEMANA' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setAgendaView('SEMANA')}
+                    className={cn(
+                      agendaView === 'SEMANA'
+                        ? 'bg-lime-400 text-black hover:bg-lime-300'
+                        : 'border-slate-700 hover:border-lime-400 hover:text-lime-400'
+                    )}
+                  >
+                    Semana
+                  </Button>
+                  <Button
+                    variant={agendaView === 'DIA' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setAgendaView('DIA')}
+                    className={cn(
+                      agendaView === 'DIA'
+                        ? 'bg-lime-400 text-black hover:bg-lime-300'
+                        : 'border-slate-700 hover:border-lime-400 hover:text-lime-400'
+                    )}
+                  >
+                    Dia
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {agendaView === 'SEMANA' ? (
+              <div className="grid gap-4 lg:grid-cols-7">
+                {agendaDays.map((day) => {
+                  const isoDate = toISODateLocal(day);
+                  const dayRows = filteredAgendaByDate.get(isoDate) ?? [];
+                  const isSelected = agendaSelectedDate === isoDate;
+                  return (
+                    <div
+                      key={isoDate}
+                      className={cn(
+                        'min-w-0 rounded-2xl border bg-slate-900/60 backdrop-blur-md p-3 sm:p-4 min-h-[240px]',
+                        isSelected ? 'border-lime-400/60' : 'border-slate-800/80'
+                      )}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setAgendaSelectedDate(isoDate)}
+                        className="w-full text-left"
+                      >
+                        <p className="text-[11px] uppercase tracking-widest font-bold text-slate-400">
+                          {DAY_NAMES[day.getUTCDay()]}
+                        </p>
+                        <p className="mt-1 text-base font-bold text-foreground">
+                          {day.toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit' })}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">{dayRows.length} aula(s)</p>
+                      </button>
+
+                      <div className="mt-3 space-y-2">
+                        {dayRows.length === 0 ? (
+                          <div className="rounded-xl border border-dashed border-slate-700 px-3 py-4 text-center text-xs text-slate-500">
+                            Nenhuma aula agendada.
+                          </div>
+                        ) : (
+                          dayRows.map((item) => {
+                            const aluno = alunosById.get(item.aluno_id);
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  setAgendaSelectedDate(isoDate);
+                                  setSelectedAgendamento(item);
+                                  setIsAgendaOpen(true);
+                                }}
+                                className="w-full min-w-0 rounded-xl border border-slate-800 bg-slate-950/40 px-2 py-2 text-left hover:border-lime-400/40"
+                              >
+                                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                  <span className="text-sm font-semibold text-foreground">{formatTimeBR(item.data_hora)}</span>
+                                  <Badge className={cn('max-w-full whitespace-normal break-words border rounded-full text-[10px] font-bold uppercase', AGENDA_STATUS_COLOR[item.status])}>
+                                    {AGENDA_STATUS_LABEL[item.status]}
+                                  </Badge>
+                                </div>
+                                <p className="mt-1 break-words text-sm text-slate-200">{aluno?.nome ?? 'Aluno não encontrado'}</p>
+                                {item.observacoes && (
+                                  <p className="mt-1 line-clamp-2 text-xs text-slate-500">{item.observacoes}</p>
+                                )}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openAgendaCreate(isoDate)}
+                        className="mt-3 h-auto min-h-9 w-full whitespace-normal px-2 py-1.5 text-center border-slate-700 hover:border-emerald-400 hover:text-emerald-300"
+                      >
+                        <Plus className="w-4 h-4 shrink-0" />
+                        Novo horário
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-widest font-bold text-slate-400">Dia selecionado</p>
+                    <h2 className="mt-1 text-xl font-black text-foreground">{formatDateBR(`${agendaSelectedDate}T12:00:00-03:00`)}</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedAgendaRowsFiltered.length} aula(s) visíveis neste dia.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      type="date"
+                      value={agendaSelectedDate}
+                      onChange={(e) => setAgendaSelectedDate(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                    <Button
+                      onClick={() => openAgendaCreate(agendaSelectedDate)}
+                      className="bg-emerald-500 text-black hover:bg-emerald-400"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Agendar aula
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  {selectedAgendaRowsFiltered.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
+                      Nenhuma aula encontrada para esta data.
+                    </div>
+                  ) : (
+                    selectedAgendaRowsFiltered.map((item) => {
+                      const aluno = alunosById.get(item.aluno_id);
+                      return (
+                        <div
+                          key={item.id}
+                          className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4"
+                        >
+                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-lg font-bold text-foreground">{formatTimeBR(item.data_hora)}</p>
+                                <Badge className={cn('border rounded-full text-[10px] font-bold uppercase tracking-wider', AGENDA_STATUS_COLOR[item.status])}>
+                                  {AGENDA_STATUS_LABEL[item.status]}
+                                </Badge>
+                              </div>
+                              <p className="mt-1 text-sm text-slate-200">{aluno?.nome ?? 'Aluno não encontrado'}</p>
+                              <p className="mt-1 text-xs text-slate-500">{aluno?.whatsapp ?? 'Sem WhatsApp'}</p>
+                              {item.observacoes && <p className="mt-2 text-sm text-slate-400">{item.observacoes}</p>}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(['AGENDADO', 'CONCLUIDO', 'FALTOU', 'CANCELADO'] as AgendamentoStatus[]).map((status) => (
+                                <Button
+                                  key={status}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => updateAgendamentoStatus(item, status)}
+                                  className={cn(
+                                    'border-slate-700 hover:border-lime-400 hover:text-lime-300',
+                                    item.status === status && 'border-lime-400/60 text-lime-300'
+                                  )}
+                                >
+                                  {AGENDA_STATUS_LABEL[status]}
+                                </Button>
+                              ))}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedAgendamento(item);
+                                  setIsAgendaOpen(true);
+                                }}
+                                className="border-slate-700 hover:border-lime-400 hover:text-lime-300"
+                              >
+                                Detalhes
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        </div>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -1162,6 +1317,8 @@ export default function AdminDashboard() {
             {selected && (
               <DetailModal
                 aluno={selected}
+                agendamentos={state.agendamentos}
+                faturas={state.faturas}
                 initialConversionMode={openConversionForId === selected.id}
                 onMarkPaid={markAsPaid}
                 onClose={() => {
@@ -1190,6 +1347,35 @@ export default function AdminDashboard() {
                 prependCreatedRow(row);
                 setIsCreateOpen(false);
               }}
+            />
+          </DialogContent>
+        </Dialog>
+      </AnimatePresence>
+
+      <AnimatePresence>
+        <Dialog
+          open={isAgendaOpen}
+          onOpenChange={(open) => {
+            setIsAgendaOpen(open);
+            if (!open) setSelectedAgendamento(null);
+          }}
+        >
+          <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-slate-800/80 bg-slate-900/95 backdrop-blur-xl">
+            <div className="sr-only">
+              <DialogTitle>{selectedAgendamento ? 'Editar aula' : 'Agendar aula'}</DialogTitle>
+              <DialogDescription>
+                Vincule um aluno a um horário e atualize o status da aula.
+              </DialogDescription>
+            </div>
+            <AgendaModal
+              agendamento={selectedAgendamento}
+              alunos={state.rows}
+              initialDate={agendaPrefillDate}
+              onClose={() => {
+                setIsAgendaOpen(false);
+                setSelectedAgendamento(null);
+              }}
+              onSaved={handleAgendaSave}
             />
           </DialogContent>
         </Dialog>
@@ -1234,19 +1420,19 @@ function ManualCreateModal({
       setError('A idade, quando informada, deve ficar entre 10 e 100.');
       return;
     }
-    if (mensalidade !== null && mensalidade < 0) {
+    if (!form.permuta && mensalidade !== null && mensalidade < 0) {
       setError('A mensalidade não pode ser negativa.');
       return;
     }
-    if (diaVencimento !== null && (diaVencimento < 1 || diaVencimento > 31)) {
+    if (!form.permuta && diaVencimento !== null && (diaVencimento < 1 || diaVencimento > 31)) {
       setError('O dia de vencimento deve ser um número entre 1 e 31.');
       return;
     }
-    if (form.status === 'ATIVO' && mensalidade === null) {
-      setError('Para um aluno ativo, informe o valor da mensalidade.');
+    if (form.status === 'ATIVO' && !form.permuta && (mensalidade === null || mensalidade <= 0)) {
+      setError('Para um aluno ativo, informe uma mensalidade maior que zero ou selecione permuta.');
       return;
     }
-    if (form.status === 'ATIVO' && diaVencimento === null) {
+    if (form.status === 'ATIVO' && !form.permuta && diaVencimento === null) {
       setError('Para um aluno ativo, informe o dia de vencimento.');
       return;
     }
@@ -1276,8 +1462,9 @@ function ManualCreateModal({
         status: form.status,
         origem: 'cadastro-manual',
         whatsapp_link: buildWhatsAppLink(whatsapp.formatted) || null,
-        mensalidade: isLeadRecord ? null : mensalidade,
-        dia_vencimento: isLeadRecord ? null : diaVencimento,
+        permuta: !isLeadRecord && form.permuta,
+        mensalidade: isLeadRecord || form.permuta ? null : mensalidade,
+        dia_vencimento: isLeadRecord || form.permuta ? null : diaVencimento,
       };
 
       const { data, error: insertError } = await sb
@@ -1358,7 +1545,11 @@ function ManualCreateModal({
               placeholder="Opcional"
             />
           </Field>
-          <Field label="Valor da Mensalidade (R$)">
+          <label className="sm:col-span-2 flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-sm text-slate-200">
+            <input type="checkbox" checked={form.permuta} onChange={(e) => setField('permuta', e.target.checked)} className="mt-1 accent-lime-400" />
+            <span><strong>Permuta de serviços</strong><span className="mt-1 block text-xs text-slate-400">Aluno sem mensalidade ou vencimento, sem cobrança.</span></span>
+          </label>
+          {!form.permuta && <><Field label="Valor da Mensalidade (R$)">
             <input
               value={form.mensalidade}
               onChange={(e) => setField('mensalidade', e.target.value)}
@@ -1373,7 +1564,7 @@ function ManualCreateModal({
               className={INPUT_CLASS}
               placeholder={form.status === 'ATIVO' ? 'Obrigatório para aluno ativo' : '1 a 31'}
             />
-          </Field>
+          </Field></>}
           <Field label="Status" className="sm:col-span-2">
             <select
               value={form.status}
@@ -1420,12 +1611,16 @@ function ManualCreateModal({
 
 function DetailModal({
   aluno,
+  agendamentos,
+  faturas,
   initialConversionMode,
   onMarkPaid,
   onClose,
   onUpdated,
 }: {
   aluno: AlunosRow;
+  agendamentos: AgendamentosRow[];
+  faturas: FaturasRow[];
   initialConversionMode?: boolean;
   onMarkPaid: (alunoId: string) => Promise<void> | void;
   onClose: () => void;
@@ -1441,6 +1636,7 @@ function DetailModal({
     mensalidade: aluno.mensalidade == null ? '' : String(aluno.mensalidade).replace('.', ','),
     dia_vencimento: aluno.dia_vencimento == null ? '' : String(aluno.dia_vencimento),
     status: aluno.status,
+    permuta: aluno.permuta,
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -1453,6 +1649,7 @@ function DetailModal({
       mensalidade: aluno.mensalidade == null ? '' : String(aluno.mensalidade).replace('.', ','),
       dia_vencimento: aluno.dia_vencimento == null ? '' : String(aluno.dia_vencimento),
       status: aluno.status,
+      permuta: aluno.permuta,
     });
     setSaveError(null);
     setConversionMode(Boolean(initialConversionMode));
@@ -1468,24 +1665,24 @@ function DetailModal({
 
     const mensalidade = parseCurrencyInput(draft.mensalidade);
     const diaVencimento = parseOptionalInteger(draft.dia_vencimento);
-    if (draft.mensalidade.trim() && mensalidade === null) {
+    if (!draft.permuta && draft.mensalidade.trim() && mensalidade === null) {
       setSaveError('Informe uma mensalidade válida.');
       return;
     }
-    if (diaVencimento !== null && (diaVencimento < 1 || diaVencimento > 31)) {
+    if (!draft.permuta && diaVencimento !== null && (diaVencimento < 1 || diaVencimento > 31)) {
       setSaveError('O dia de vencimento deve ficar entre 1 e 31.');
       return;
     }
-    if (mode === 'convert' && mensalidade === null) {
-      setSaveError('Para converter em aluno, informe a mensalidade.');
+    if (mode === 'convert' && !draft.permuta && (mensalidade === null || mensalidade <= 0)) {
+      setSaveError('Para converter em aluno, informe uma mensalidade maior que zero ou selecione permuta.');
       return;
     }
-    if (mode === 'convert' && diaVencimento === null) {
+    if (mode === 'convert' && !draft.permuta && diaVencimento === null) {
       setSaveError('Para converter em aluno, informe o dia de vencimento.');
       return;
     }
-    if (draft.status === 'ATIVO' && (mensalidade === null || diaVencimento === null)) {
-      setSaveError('Aluno ativo precisa ter mensalidade e dia de vencimento.');
+    if (draft.status === 'ATIVO' && !draft.permuta && (mensalidade === null || mensalidade <= 0 || diaVencimento === null)) {
+      setSaveError('Informe mensalidade maior que zero e vencimento, ou selecione permuta.');
       return;
     }
 
@@ -1504,8 +1701,9 @@ function DetailModal({
       const { data, error } = await sb
         .from('alunos')
         .update({
-          mensalidade: isLeadRecord ? null : mensalidade,
-          dia_vencimento: isLeadRecord ? null : diaVencimento,
+          permuta: !isLeadRecord && draft.permuta,
+          mensalidade: isLeadRecord || draft.permuta ? null : mensalidade,
+          dia_vencimento: isLeadRecord || draft.permuta ? null : diaVencimento,
           status: nextStatus,
         } as never)
         .eq('id', aluno.id)
@@ -1547,6 +1745,27 @@ function DetailModal({
   const canConvert = canConvertAluno(aluno.status);
   const showBillingFields = conversionMode || aluno.status === 'ATIVO' || aluno.status === 'INATIVO';
   const finStatus = getFinancialStatus(aluno);
+  const faturasDoAluno = useMemo(
+    () =>
+      faturas
+        .filter((item) => item.aluno_id === aluno.id)
+        .sort((a, b) => {
+          const byMes = monthReferenceToSortable(b.mes_referencia) - monthReferenceToSortable(a.mes_referencia);
+          return byMes !== 0 ? byMes : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }),
+    [aluno.id, faturas]
+  );
+  const agendaDoAluno = useMemo(
+    () =>
+      agendamentos
+        .filter((item) => item.aluno_id === aluno.id)
+        .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime()),
+    [agendamentos, aluno.id]
+  );
+  const proximasAulas = useMemo(() => {
+    const now = Date.now();
+    return agendaDoAluno.filter((item) => new Date(item.data_hora).getTime() >= now).slice(0, 6);
+  }, [agendaDoAluno]);
 
   const handleMarkPaid = async () => {
     if (paying) return;
@@ -1611,7 +1830,7 @@ function DetailModal({
             <div className="mb-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4">
               <p className="text-sm font-semibold text-emerald-200">Esse registro ainda está na etapa de lead.</p>
               <p className="mt-1 text-xs text-emerald-100/80">
-                Quando ele fechar, clique em converter e informe mensalidade + vencimento para virar aluno ativo.
+                Quando ele fechar, clique em converter e informe a mensalidade ou selecione permuta.
               </p>
               <Button
                 onClick={() => setConversionMode(true)}
@@ -1622,8 +1841,14 @@ function DetailModal({
             </div>
           )}
 
+          {showBillingFields && (
+            <label className="mb-4 flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-sm text-slate-200">
+              <input type="checkbox" checked={draft.permuta} onChange={(e) => setDraft((s) => ({ ...s, permuta: e.target.checked }))} className="mt-1 accent-lime-400" />
+              <span><strong>Permuta de serviços</strong><span className="mt-1 block text-xs text-slate-400">Sem mensalidade, vencimento ou cobrança. Salve para confirmar.</span></span>
+            </label>
+          )}
           <div className="grid gap-4 sm:grid-cols-3">
-            {showBillingFields && (
+            {showBillingFields && !draft.permuta && (
               <>
                 <Field label="Mensalidade">
                   <input
@@ -1643,7 +1868,7 @@ function DetailModal({
                 </Field>
               </>
             )}
-            <Field label="Status" className={showBillingFields ? undefined : 'sm:col-span-3'}>
+            <Field label="Status" className={showBillingFields && !draft.permuta ? undefined : 'sm:col-span-3'}>
               <select
                 value={draft.status}
                 onChange={(e) => setDraft((s) => ({ ...s, status: e.target.value as AlunoStatus }))}
@@ -1669,10 +1894,10 @@ function DetailModal({
                 </span>
               </div>
 
-              {aluno.status === 'ATIVO' && (
+              {aluno.status === 'ATIVO' && !aluno.permuta && !draft.permuta && (
                 <Button
                   onClick={handleMarkPaid}
-                  disabled={paying || finStatus === 'PAGO'}
+                  disabled={paying || finStatus === 'PAGO' || finStatus === 'NAO_CONFIGURADO'}
                   className="inline-flex items-center gap-2 bg-emerald-500 text-black hover:bg-emerald-400"
                 >
                   {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
@@ -1727,7 +1952,7 @@ function DetailModal({
               Salvar CRM
             </Button>
             )}
-            <a
+            {!(draft.permuta && quickAction === 'charge') && <a
               href={buildPrefilledWhatsAppLink(aluno, quickAction)}
               target="_blank"
               rel="noopener noreferrer"
@@ -1735,7 +1960,7 @@ function DetailModal({
             >
               <MessageCircle className="w-4 h-4" />
               {quickAction === 'charge' ? 'Mensagem de cobrança' : 'Mensagem de boas-vindas'}
-            </a>
+            </a>}
           </div>
         </Section>
 
@@ -1795,9 +2020,102 @@ function DetailModal({
         <Section title="Rotina e observações" open={expanded.rotina} onToggle={() => toggle('rotina')}>
           <div className="divide-y divide-slate-800/70">
             {row('Rotina diária / semanal', aluno.rotina || '— (não informado)', { Icon: ListTodo })}
-            {row('Mensalidade atual', formatCurrencyBR(aluno.mensalidade))}
+            {row('Modalidade', aluno.permuta ? 'Permuta de serviços' : 'Mensalidade')}
+            {row('Mensalidade atual', aluno.permuta ? 'Sem cobrança' : formatCurrencyBR(aluno.mensalidade))}
             {row('Dia do vencimento', aluno.dia_vencimento ? `Dia ${aluno.dia_vencimento}` : '—')}
           </div>
+        </Section>
+
+        <Section title="Histórico de pagamentos" defaultOpen>
+          {faturasDoAluno.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-700 px-3 py-5 text-sm text-slate-500">
+              Nenhuma fatura registrada para este aluno ainda.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {faturasDoAluno.map((fatura) => (
+                <div
+                  key={fatura.id}
+                  className="rounded-2xl border border-slate-800/70 bg-slate-950/40 px-4 py-3"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Mês {formatMonthReference(fatura.mes_referencia)}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Valor: {formatCurrencyBR(fatura.valor)} · Vencimento: {formatDateBR(fatura.data_vencimento)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Pago em: {formatDateTimeBR(fatura.data_pagamento)}
+                      </p>
+                      {fatura.observacao && <p className="mt-2 text-sm text-slate-400">{fatura.observacao}</p>}
+                    </div>
+                    <Badge
+                      className={cn(
+                        'border rounded-full text-[10px] font-bold uppercase tracking-wider self-start',
+                        fatura.status === 'PAID'
+                          ? 'bg-emerald-400/15 text-emerald-200 border-emerald-400/35'
+                          : 'bg-amber-400/15 text-amber-200 border-amber-400/35'
+                      )}
+                    >
+                      {fatura.status === 'PAID' ? 'Pago' : fatura.status === 'OVERDUE' ? 'Atrasado' : fatura.status === 'CANCELLED' ? 'Cancelado' : 'Pendente'}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+
+        <Section title="Agenda do aluno" defaultOpen>
+          {agendaDoAluno.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-700 px-3 py-5 text-sm text-slate-500">
+              Nenhuma aula vinculada para este aluno ainda.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-slate-800/70 bg-slate-950/40 px-4 py-3">
+                <p className="text-xs uppercase tracking-widest font-bold text-slate-400">Próximas aulas</p>
+                <div className="mt-3 space-y-2">
+                  {proximasAulas.length === 0 ? (
+                    <p className="text-sm text-slate-500">Não há próximas aulas agendadas no momento.</p>
+                  ) : (
+                    proximasAulas.map((item) => (
+                      <div key={item.id} className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">
+                            {formatDateBR(item.data_hora)} às {formatTimeBR(item.data_hora)}
+                          </p>
+                          {item.observacoes && <p className="text-xs text-slate-500">{item.observacoes}</p>}
+                        </div>
+                        <Badge className={cn('border rounded-full text-[10px] font-bold uppercase tracking-wider', AGENDA_STATUS_COLOR[item.status])}>
+                          {AGENDA_STATUS_LABEL[item.status]}
+                        </Badge>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-800/70 bg-slate-950/40 px-4 py-3">
+                <p className="text-xs uppercase tracking-widest font-bold text-slate-400">Histórico recente</p>
+                <div className="mt-3 space-y-2">
+                  {agendaDoAluno.slice(-6).reverse().map((item) => (
+                    <div key={item.id} className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {formatDateBR(item.data_hora)} às {formatTimeBR(item.data_hora)}
+                        </p>
+                        {item.observacoes && <p className="text-xs text-slate-500">{item.observacoes}</p>}
+                      </div>
+                      <Badge className={cn('border rounded-full text-[10px] font-bold uppercase tracking-wider', AGENDA_STATUS_COLOR[item.status])}>
+                        {AGENDA_STATUS_LABEL[item.status]}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </Section>
 
         <Section title="Dados internos" open={expanded.admin} onToggle={() => toggle('admin')}>
@@ -1861,6 +2179,203 @@ function DetailModal({
           </Button>
         </div>
       </div>
+    </motion.div>
+  );
+}
+
+function AgendaModal({
+  agendamento,
+  alunos,
+  initialDate,
+  onClose,
+  onSaved,
+}: {
+  agendamento: AgendamentosRow | null;
+  alunos: AlunosRow[];
+  initialDate: string;
+  onClose: () => void;
+  onSaved: (row: AgendamentosRow) => void;
+}) {
+  const [form, setForm] = useState<AgendaFormState>(EMPTY_AGENDA_FORM);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const alunosSelecionaveis = useMemo(
+    () =>
+      [...alunos].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).filter((aluno) => aluno.status !== 'PERDIDO'),
+    [alunos]
+  );
+
+  useEffect(() => {
+    if (agendamento) {
+      const { date, time } = formatAgendaDateTime(agendamento.data_hora);
+      setForm({
+        aluno_id: agendamento.aluno_id,
+        data: date,
+        hora: time || '08:00',
+        status: agendamento.status,
+        observacoes: agendamento.observacoes ?? '',
+      });
+      return;
+    }
+    setForm({
+      ...EMPTY_AGENDA_FORM,
+      data: initialDate,
+    });
+    setError(null);
+  }, [agendamento, initialDate]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (saving) return;
+    if (!form.aluno_id) {
+      setError('Selecione um aluno para o agendamento.');
+      return;
+    }
+    if (!form.data) {
+      setError('Informe a data da aula.');
+      return;
+    }
+    if (!form.hora) {
+      setError('Informe o horário da aula.');
+      return;
+    }
+
+    const sb = getSupabase();
+    if (!sb) {
+      setError('Supabase não está configurado neste ambiente.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const payload = {
+        aluno_id: form.aluno_id,
+        data_hora: toAgendaDateTime(form.data, form.hora),
+        status: form.status,
+        observacoes: form.observacoes.trim() || null,
+      };
+
+      const query = agendamento
+        ? sb.from('agendamentos').update(payload as never).eq('id', agendamento.id)
+        : sb.from('agendamentos').insert(payload as never);
+
+      const { data, error } = await query.select().single();
+      if (error) throw error;
+      onSaved(data as AgendamentosRow);
+    } catch (err) {
+      const { message } = formatSupabaseError(err, agendamento ? 'Atualizar aula' : 'Criar aula');
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 8 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
+      className="p-5 sm:p-6"
+    >
+      <div className="flex items-start justify-between gap-3 mb-5">
+        <div>
+          <h2 className="font-display font-black text-xl text-foreground">
+            {agendamento ? 'Editar Aula' : 'Agendar Aula'}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Vincule o aluno a um horário e registre o status da aula direto no CRM.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-9 h-9 rounded-xl border border-slate-700/80 text-slate-400 hover:text-lime-400 hover:border-lime-400 hover:bg-lime-400/10 inline-flex items-center justify-center"
+        >
+          <X className="w-4.5 h-4.5" />
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Field label="Aluno" required>
+          <select
+            value={form.aluno_id}
+            onChange={(e) => setForm((s) => ({ ...s, aluno_id: e.target.value }))}
+            className={INPUT_CLASS}
+          >
+            <option value="">Selecione...</option>
+            {alunosSelecionaveis.map((aluno) => (
+              <option key={aluno.id} value={aluno.id}>
+                {aluno.nome} · {STATUS_LABEL[aluno.status]}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Data" required>
+            <input
+              type="date"
+              value={form.data}
+              onChange={(e) => setForm((s) => ({ ...s, data: e.target.value }))}
+              className={INPUT_CLASS}
+            />
+          </Field>
+          <Field label="Hora" required>
+            <input
+              type="time"
+              value={form.hora}
+              onChange={(e) => setForm((s) => ({ ...s, hora: e.target.value }))}
+              className={INPUT_CLASS}
+            />
+          </Field>
+          <Field label="Status">
+            <select
+              value={form.status}
+              onChange={(e) => setForm((s) => ({ ...s, status: e.target.value as AgendamentoStatus }))}
+              className={INPUT_CLASS}
+            >
+              {(['AGENDADO', 'CONCLUIDO', 'FALTOU', 'CANCELADO'] as AgendamentoStatus[]).map((status) => (
+                <option key={status} value={status}>
+                  {AGENDA_STATUS_LABEL[status]}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        <Field label="Observações">
+          <textarea
+            value={form.observacoes}
+            onChange={(e) => setForm((s) => ({ ...s, observacoes: e.target.value }))}
+            className={cn(INPUT_CLASS, 'min-h-[110px] resize-y')}
+            placeholder="Ex.: treino experimental, remarcado, foco em membros inferiores..."
+          />
+        </Field>
+
+        {error && (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            {error}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <Button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center gap-2 bg-emerald-500 text-black hover:bg-emerald-400 border border-emerald-400/70"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {agendamento ? 'Salvar aula' : 'Criar aula'}
+          </Button>
+          <Button type="button" variant="ghost" onClick={onClose} className="text-slate-400 hover:text-foreground">
+            Cancelar
+          </Button>
+        </div>
+      </form>
     </motion.div>
   );
 }

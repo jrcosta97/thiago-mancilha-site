@@ -1,3 +1,4 @@
+import { WHATSAPP_NUMBER } from '@/lib/contact';
 import { motion } from 'framer-motion';
 import {
   Check, MessageCircle, CalendarDays, Zap, Users, Globe2, Crown, ArrowRight,
@@ -12,7 +13,7 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 
-const WHATSAPP_NUMBER = '5548988720439';
+
 
 interface PlansCarouselProps {
   onCTAClick: () => void;

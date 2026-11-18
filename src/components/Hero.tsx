@@ -1,10 +1,11 @@
+import { WHATSAPP_NUMBER } from '@/lib/contact';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles, CheckCircle2, MessageCircle, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BlurText } from '@/components/ui/BlurText';
 import { BorderBeam } from '@/components/ui/BorderBeam';
 
-const WHATSAPP_NUMBER = '5548988720439';
+
 
 interface HeroProps {
   onCTAClick: () => void;

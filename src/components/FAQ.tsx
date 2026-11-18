@@ -1,3 +1,4 @@
+import { WHATSAPP_NUMBER } from '@/lib/contact';
 import { motion } from 'framer-motion';
 import { MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import {
@@ -10,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-const WHATSAPP_NUMBER = '5548988720439';
+
 
 interface FAQProps {
   onCTAClick: () => void;

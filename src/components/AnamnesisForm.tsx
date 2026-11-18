@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { WHATSAPP_NUMBER } from '@/lib/contact';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Dumbbell, ClipboardList, CheckCircle2, ArrowRight, ArrowLeft, PartyPopper, MessageCircle,
-  HeartPulse, ThumbsUp, CalendarDays, Sparkles, AlertTriangle, Shield, Target, Clock, Users,
-  FileSpreadsheet, Download, Database,
+  HeartPulse, ThumbsUp, Sparkles, AlertTriangle, Shield, Target, Clock, Users,
 } from 'lucide-react';
-import { useForm, type FieldValues, type Path } from 'react-hook-form';
+import { useForm, type Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -14,24 +14,17 @@ import {
   buildSheetRow,
   buildUniversalPayload,
   payloadToURLSearchParams,
-  reportToTableRows,
-  buildSheetCSV,
-  downloadCSV,
   formatWhatsApp,
-  sheetSyncSelfTest,
   type SheetValidationReport,
 } from '@/services/sheet-sync';
 import {
   isSupabaseConfigured,
-  getSupabase,
-  insertAluno,
-  formatSupabaseError,
   insertAlunoViaEdgeFunction,
-  type AlunosRow,
   type AlunoStatus,
 } from '@/lib/supabase';
+import { getSubmissionAttempt } from '@/lib/submission-attempt';
 
-const WHATSAPP_NUMBER = '5548988720439';
+
 
 interface AnamnesisFormProps {
   isOpen: boolean;
@@ -46,7 +39,7 @@ const schema = z.object({
       message: 'Informe nome e sobrenome (mínimo 2 palavras)',
     }),
   idade: z.coerce
-    .number({ invalid_type_error: 'Idade deve ser um número' })
+    .number({ error: 'Idade deve ser um número' })
     .int({ message: 'Idade deve ser um número inteiro' })
     .min(14, { message: 'Idade mínima para avaliação é 14 anos' })
     .max(99, { message: 'Idade máxima aceita é 99 anos' }),
@@ -59,15 +52,16 @@ const schema = z.object({
   goal: z.string().min(1, { message: 'Selecione um objetivo principal' }),
   goalDetails: z.string().max(1000).optional(),
   frequency: z.string().min(1, { message: 'Selecione quantas vezes por semana pode treinar' }),
-  hasInjury: z.enum(['s', 'n'], { required_error: 'Informe se tem lesão ou limitação' }),
+  hasInjury: z.enum(['s', 'n'], { error: 'Informe se tem lesão ou limitação' }),
   injuryDetails: z.string().optional(),
   rotina: z.string().max(1500).optional(),
   preferencia: z.enum(['presencial', 'online', 'qualquer'], {
-    required_error: 'Selecione uma preferência de atendimento',
+    error: 'Selecione uma preferência de atendimento',
   }),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormInputValues = z.input<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 const TOTAL_STEPS = 4;
 
@@ -114,68 +108,15 @@ const cleanWhats = (v: string) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 
-const pad = (n: number) => String(n).padStart(2, '0');
-const formatDateBR = (d = new Date()) => {
-  return (
-    `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ` +
-    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-  );
-};
-
-const mapObjetivoLabel = (value: string, goalDetails?: string): string => {
-  const base = (() => {
-    switch (value) {
-      case 'emagrecer': return 'Emagrecimento';
-      case 'hipertrofia': return 'Ganho de Massa Muscular';
-      case 'mobilidade': return 'Saúde Funcional e Mobilidade';
-      case 'forca': return 'Força e Disposição';
-      case 'outro': {
-        const extra = String(goalDetails || '').trim();
-        if (extra && extra.length <= 40) return extra;
-        if (extra) return extra.slice(0, 60);
-        return 'Outro';
-      }
-      default: return value || 'Não informado';
-    }
-  })();
-  return base;
-};
-
-const mapFrequenciaLabel = (value: string): string => {
-  switch (value) {
-    case '2x': return '1 a 2 vezes por semana';
-    case '3x': return '3 a 4 vezes por semana';
-    case '4x': return '3 a 4 vezes por semana';
-    case '5xmais': return '5 a 6 vezes por semana';
-    default: return value || 'Não informado';
-  }
-};
-
-const mapLesoesCell = (hasInjury: 's' | 'n' | '', details?: string): string => {
-  if (hasInjury !== 's') return 'Não';
-  const d = String(details || '').trim();
-  if (!d) return 'Sim';
-  const pretty = d.charAt(0).toUpperCase() + d.slice(1);
-  return `Sim — ${pretty}`;
-};
-
-const mapPreferenciaLabel = (value: string): string => {
-  switch (value) {
-    case 'presencial': return 'Atendimento Presencial';
-    case 'online': return 'Atendimento Online';
-    case 'qualquer': return 'Tanto faz';
-    default: return value || 'Não informado';
-  }
-};
-
 export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
   const [step, setStep] = useState(0);
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [stepError, setStepError] = useState<string | null>(null);
   const [lastReport, setLastReport] = useState<SheetValidationReport | null>(null);
+  const submissionAttemptRef = useRef<{ key: string; payload: string } | null>(null);
 
-  const defaultValues = useMemo<FormValues>(() => ({
+  const defaultValues = useMemo<FormInputValues>(() => ({
     nome: '',
     idade: undefined as unknown as number,
     whatsapp: '',
@@ -189,8 +130,8 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
   }), []);
 
   const {
-    register, setValue, watch, trigger, clearErrors, formState: { errors, isValid }, handleSubmit, getValues,
-  } = useForm<FormValues>({
+    register, setValue, watch, trigger, clearErrors, formState: { errors }, handleSubmit, getValues,
+  } = useForm<FormInputValues, unknown, FormValues>({
     resolver: zodResolver(schema),
     mode: 'onTouched',
     reValidateMode: 'onChange',
@@ -208,7 +149,7 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
       setStepError(null);
       setLastReport(null);
       Object.entries(defaultValues).forEach(([k, v]) => {
-        setValue(k as Path<FormValues>, v as never, { shouldValidate: false, shouldDirty: false, shouldTouch: false });
+        setValue(k as Path<FormInputValues>, v as never, { shouldValidate: false, shouldDirty: false, shouldTouch: false });
       });
       clearErrors();
     }
@@ -227,7 +168,7 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
     return () => sub.unsubscribe();
   }, [watch, setValue]);
 
-  const fieldsForStep = (s: number): Path<FormValues>[] => {
+  const fieldsForStep = (s: number): Path<FormInputValues>[] => {
     switch (s) {
       case 0: return ['nome', 'idade', 'whatsapp'];
       case 1: return ['goal'];
@@ -334,180 +275,40 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
       whatsapp_link: report.rowByLetter.I || undefined,
     };
 
-    type ResultadoGAS = { ok: boolean; error?: unknown; response?: Response; url: string; body: string };
-    type ResultadoSUPA = { ok: boolean; configured: boolean; error?: unknown; validationErrors?: string[]; inserted: AlunosRow | null };
-
-    let gasResult: ResultadoGAS = { ok: false, url: WEBHOOK, body: bodyUrlEncoded };
-    let supaResult: ResultadoSUPA = { ok: false, configured: isSupabaseConfigured(), inserted: null };
-
-    try {
-      console.group('%c[Anamnesis] Envio para Google Apps Script + Supabase (Promise.all paralelo)', 'color:#CCFF00;font-weight:bold;');
-      console.log('➡️ URL do Webhook:', WEBHOOK);
-      console.log('➡️ Supabase configurado?', isSupabaseConfigured() ? 'SIM (tentando insert alunos)' : 'NÃO (pulando insert)');
-      console.log('➡️ MÓDULO: sheet-sync.ts v2 buildSheetRow + buildUniversalPayload');
-      console.log('➡️ MÉTODO DE ENVIO: application/x-www-form-urlencoded (URLSearchParams, compatível com e.parameter do GAS)');
-      console.log('➡️ Relatório buildSheetRow (9 células em ORDEM A..I):', report);
-      console.log('➡️ Payload UNIVERSAL (todas as chaves 5 formatos):', universalPayload);
-      console.log('➡️ Payload SUPABASE tabela alunos (mapeamento exato):', supabasePayload);
-      console.log('➡️ Query string URLSearchParams.toString() — cole aqui em caso de dúvida:\n', bodyUrlEncoded);
-      console.log('➡️ Headers GAS:', { method: 'POST', mode: 'no-cors', 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' });
-
-      console.groupCollapsed('%c[Anamnesis] Relatório INTEGRIDADE célula a célula (sheet-sync)', 'color:#8b5cf6;font-weight:bold;');
-      console.table(reportToTableRows(report));
-      console.groupEnd();
-
-      console.log(`%c[Anamnesis] Resumo do relatório: hasCriticalErrors=${report.hasCriticalErrors} · gapCount=${report.gapCount} · fixableGapCount=${report.fixableGapCount}`, report.hasCriticalErrors ? 'color:#ef4444;font-weight:bold;' : 'color:#22c55e;font-weight:bold;');
-
-      if (report.gapCount > 0) {
-        console.groupCollapsed(`%c[Anamnesis] ⚠️ ${report.gapCount} lacuna(s) detectada(s) — detalhes:`, 'color:#f59e0b;font-weight:bold;');
-        report.errors.forEach((e) => console.error(`[ERRO ${e.code}] ${e.letter} ${e.header}: ${e.reason} · valor raw=${String(e.rawValue)} · fallback usado: ${e.insertedValue}`));
-        report.warnings.forEach((w) => console.warn(`[WARN ${w.code}] ${w.letter} ${w.header}: ${w.reason} · raw=${String(w.rawValue)} · fallback: ${w.insertedValue}`));
-        console.groupEnd();
-      }
-
-      console.warn('[Debug GAS] Valores DAS COLUNAS QUE FICAVAM VAZIAS ANTES:');
-      console.warn('  · COLUNA F Frequencia (chaves enviadas):', {
-        '0..8[5]': report.row[5],
-        col_5: universalPayload['col_5'],
-        F: universalPayload['F'],
-        Frequencia: universalPayload['Frequencia'],
-        'Frequência': universalPayload['Frequência'],
-        frequencia: universalPayload['frequencia'],
-        'frequência': universalPayload['frequência'],
-        frequencia_semanal: universalPayload['frequencia_semanal'],
-        freq: universalPayload['freq'],
-      });
-      console.warn('  · COLUNA G lesões (chaves enviadas):', {
-        '0..8[6]': report.row[6],
-        col_6: universalPayload['col_6'],
-        G: universalPayload['G'],
-        Lesões: universalPayload['Lesões'],
-        Lesoes: universalPayload['Lesoes'],
-        'lesões': universalPayload['lesões'],
-        lesoes: universalPayload['lesoes'],
-        lesao: universalPayload['lesao'],
-        les: universalPayload['les'],
-        tem_lesao: universalPayload['tem_lesao'],
-      });
-
-      // ---- CHAMADAS PARALELAS (Promise.allSettled p/ ambas prosseguir mesmo se uma falhar) ----
-      const chamadas: Promise<ResultadoGAS | ResultadoSUPA>[] = [];
-
-      chamadas.push(
-        (async (): Promise<ResultadoGAS> => {
-          try {
-            const response = await fetch(WEBHOOK, {
-              method: 'POST',
-              mode: 'no-cors',
-              headers: {
-                'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-                'X-Sent-With': 'AnamnesisForm-v3-sheet-sync-service',
-              },
-              body: bodyUrlEncoded,
-            });
-            console.log('✅ [GAS] Resposta recebida (no-cors - body é opaco):', {
-              status: response.status, type: response.type, ok: response.ok, redirected: response.redirected,
-            });
-            return { ok: true, response, url: WEBHOOK, body: bodyUrlEncoded };
-          } catch (err) {
-            console.group('%c[Anamnesis] ❌ Erro durante envio Google Apps Script', 'color:#ef4444;font-weight:bold;');
-            console.error('Detalhes do erro GAS:', err);
-            console.log('URL usada:', WEBHOOK);
-            console.log('Body URLSearchParams enviado:', bodyUrlEncoded);
-            console.groupEnd();
-            return { ok: false, error: err, url: WEBHOOK, body: bodyUrlEncoded };
-          }
-        })()
-      );
-
-      chamadas.push(
-        (async (): Promise<ResultadoSUPA> => {
-          if (!isSupabaseConfigured()) {
-            console.warn('%c[SUPABASE] Pulado: VITE_SUPABASE_URL e/ou VITE_SUPABASE_ANON_KEY ausentes.', 'color:#f59e0b;font-weight:bold;');
-            return { ok: false, configured: false, inserted: null };
-          }
-          try {
-            // ===================== FALLBACK OBRIGATÓRIO =====================
-            // O PostgREST desta máquina (/rest/v1/) está com bug de cache no
-            // Authentication URL Configuration: não carrega origins permitidas,
-            // então CORS ALWAYS FALHA. Resolução: usar Edge Function (server side)
-            // como método principal (zero CORS, bypass total).
-            // ================================================================
-            console.log('%c[SUPABASE] ▶️ Usando Edge Function (bypass CORS garantido):', 'color:#6d28d9;font-weight:bold;', 'insert-aluno');
-            const edgeResult = await insertAlunoViaEdgeFunction(supabasePayload);
-
-            if (edgeResult.validationErrors && edgeResult.validationErrors.length > 0) {
-              console.group('%c[SUPABASE] ⚠️ Validação antes do insert (Edge Function) falhou', 'color:#f59e0b;font-weight:bold;');
-              edgeResult.validationErrors.forEach((e) => console.warn('  -', e));
-              console.groupEnd();
-              return { ok: false, configured: true, validationErrors: edgeResult.validationErrors, inserted: null };
-            }
-            if (!edgeResult.ok || edgeResult.error) {
-              const errObj = edgeResult.error;
-              const fmtMessage =
-                errObj && typeof errObj === 'object' && 'message' in errObj
-                  ? (errObj as { message: string }).message
-                  : 'Erro desconhecido na Edge Function';
-              console.group('%c[Anamnesis] ❌ Erro durante insert Supabase (Edge Function)', 'color:#ef4444;font-weight:bold;');
-              console.error('Mensagem:', fmtMessage);
-              console.error('Erro completo:', errObj);
-              console.groupEnd();
-              return { ok: false, configured: true, error: fmtMessage, inserted: null };
-            }
-            console.log('%c[SUPABASE] ✅ aluno inserido com SUCESSO (via Edge Function):', 'color:#22c55e;font-weight:bold;', edgeResult.data);
-            return { ok: true, configured: true, inserted: (edgeResult.data ?? null) as AlunosRow | null };
-          } catch (err) {
-            const fmt = formatSupabaseError(err, 'Supabase insert alunos catch');
-            console.group('%c[Anamnesis] ❌ Erro inesperado (catch) durante insert Supabase (Edge Function)', 'color:#ef4444;font-weight:bold;');
-            console.error(fmt.message);
-            console.error('Erro completo:', err);
-            console.groupEnd();
-            return { ok: false, configured: true, error: err, inserted: null };
-          }
-        })()
-      );
-
-      const resultados = await Promise.allSettled(chamadas);
-      const resultadoGasRaw = resultados[0];
-      const resultadoSupaRaw = resultados[1];
-
-      gasResult = resultadoGasRaw.status === 'fulfilled'
-        ? (resultadoGasRaw.value as ResultadoGAS)
-        : { ok: false, error: resultadoGasRaw.status === 'rejected' ? resultadoGasRaw.reason : 'promise rejeitada', url: WEBHOOK, body: bodyUrlEncoded };
-
-      supaResult = resultadoSupaRaw.status === 'fulfilled'
-        ? (resultadoSupaRaw.value as ResultadoSUPA)
-        : { ok: false, configured: isSupabaseConfigured(), error: resultadoSupaRaw.status === 'rejected' ? resultadoSupaRaw.reason : 'promise rejeitada', inserted: null };
-
-      console.group('%c[Anamnesis] RESUMO das chamadas paralelas (Promise.allSettled):', 'color:#22c55e;font-weight:bold;');
-      console.log('Google Apps Script:', gasResult.ok ? '✅ SUCESSO' : '❌ FALHA', gasResult);
-      console.log('Supabase:', supaResult.ok ? '✅ SUCESSO' : (supaResult.configured ? '❌ FALHA' : '⏭️  NÃO CONFIGURADO (pulado)'), supaResult);
-      console.groupEnd();
-      console.groupEnd();
-    } catch (err) {
-      console.group('%c[Anamnesis] ❌ Erro GLOBAL durante envio (catch externo)', 'color:#ef4444;font-weight:bold;');
-      console.error('Detalhes do erro global:', err);
-      console.groupEnd();
-      setStepError('Não foi possível enviar sua ficha agora. Tente novamente em alguns segundos ou entre em contato pelo WhatsApp.');
+    if (!isSupabaseConfigured()) {
+      setStepError('O formulário está temporariamente indisponível. Tente novamente mais tarde ou fale pelo WhatsApp.');
       setSending(false);
       setLastReport(report);
       return;
     }
 
-    const ambasFalharam =
-      !gasResult.ok &&
-      supaResult.configured === true && !supaResult.ok;
+    try {
+      const payloadFingerprint = JSON.stringify(supabasePayload);
+      const attempt = getSubmissionAttempt(submissionAttemptRef.current, payloadFingerprint);
+      submissionAttemptRef.current = attempt;
+      const result = await insertAlunoViaEdgeFunction(supabasePayload, attempt.key);
+      if (!result.ok || result.error || !result.data) {
+        setStepError('Não foi possível salvar sua ficha agora. Tente novamente ou fale diretamente pelo WhatsApp.');
+        setSending(false);
+        setLastReport(report);
+        return;
+      }
 
-    const aoMenosUmaFuncionou = gasResult.ok || supaResult.ok || (!supaResult.configured && gasResult.ok);
-
-    if (ambasFalharam) {
-      setStepError('Não foi possível salvar sua ficha no momento. Clique no ícone de WhatsApp abaixo e envie seus dados diretamente para o Thiago.');
+      // A planilha é uma cópia auxiliar. A resposta no-cors não confirma gravação,
+      // portanto nunca determina o sucesso mostrado ao visitante.
+      if (WEBHOOK && !WEBHOOK.includes('WebhookPlaceholder')) {
+        void fetch(WEBHOOK, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
+          body: bodyUrlEncoded,
+        }).catch(() => undefined);
+      }
+      setSuccess(true);
+      submissionAttemptRef.current = null;
+    } catch {
+      setStepError('Não foi possível salvar sua ficha agora. Tente novamente ou fale diretamente pelo WhatsApp.');
     }
-    if (!aoMenosUmaFuncionou && !ambasFalharam) {
-      setStepError('Não foi possível enviar sua ficha. Confira sua conexão ou use o botão de WhatsApp para contato direto.');
-    }
-
-    setSuccess(aoMenosUmaFuncionou || !ambasFalharam ? true : success);
     setSending(false);
     setLastReport(report);
   };
@@ -557,13 +358,7 @@ Quando você puder me chamar para conversarmos melhor? Obrigado!`
   );
   const successWhatsLink = `https://api.whatsapp.com/send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${successWhats}`;
 
-  const handleDownloadCurrentCSV = () => {
-    if (!lastReport) return;
-    const csv = buildSheetCSV([lastReport.row]);
-    downloadCSV(csv, `ficha-avaliacao-__${Date.now()}.csv`);
-  };
-
-  const fieldError = (k: Path<FormValues>) => (errors as unknown as Record<string, { message?: string }>)[k]?.message || undefined;
+  const fieldError = (k: Path<FormInputValues>) => (errors as unknown as Record<string, { message?: string }>)[k]?.message || undefined;
 
   const inputBase =
     'w-full rounded-2xl bg-slate-950/40 border text-foreground px-4 sm:px-5 font-bold text-base outline-none transition-all placeholder:text-text-muted/70 ' +
@@ -733,63 +528,6 @@ Quando você puder me chamar para conversarmos melhor? Obrigado!`
                     ))}
                   </div>
 
-                  <motion.div
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.7, type: 'spring', stiffness: 120, damping: 14 }}
-                    className="w-full max-w-md rounded-3xl border border-orange-400/25 bg-gradient-to-br from-orange-400/8 via-slate-900 to-slate-900 p-4 sm:p-5 space-y-3"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-11 h-11 rounded-2xl bg-orange-400/15 border border-orange-400/30 text-orange-400 shrink-0 flex items-center justify-center">
-                        <FileSpreadsheet className="w-5 h-5" strokeWidth={2.2} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-extrabold text-slate-100 text-sm sm:text-base leading-tight">
-                          Correção da planilha · linhas quebradas
-                        </p>
-                        <p className="text-[11px] sm:text-xs text-slate-400 leading-relaxed mt-1">
-                          Baixe o CSV abaixo para colar manualmente as <strong className="text-orange-400">células F (Frequencia) e G (lesões)</strong> que ficaram vazias nas últimas linhas da planilha.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="grid sm:grid-cols-2 gap-2.5">
-                      <button
-                        type="button"
-                        onClick={handleDownloadCurrentCSV}
-                        className="h-11 rounded-2xl bg-lime-400 text-slate-950 hover:bg-lime-300 transition-all font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2"
-                      >
-                        <Download className="w-4 h-4" strokeWidth={2.3} />
-                        Baixar CSV da ficha atual
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          try {
-                            const rows = (
-                              (window as unknown as { __sheetSync__?: { sheetSyncSelfTest: () => unknown[] } }).__sheetSync__?.sheetSyncSelfTest as () => unknown[] | undefined
-                            )?.()?.filter?.((p: unknown) => typeof p === 'object' && p !== null && 'rowPrevia' in (p as object)) as Array<{ rowPrevia: string }> | undefined;
-                            const sample = (rows ?? []).map((r) => {
-                              const parts = String(r.rowPrevia)
-                                .split(' | ')
-                                .map((s) => s.split('=')[1] ?? '');
-                              return parts;
-                            });
-                            const csv = buildSheetCSV(sample);
-                            downloadCSV(csv, `exemplos-lacunas-planilha-__${Date.now()}.csv`);
-                          } catch (err) {
-                            console.warn('[CSV] Falha ao gerar amostras:', err);
-                          }
-                        }}
-                        className="h-11 rounded-2xl border border-slate-800 bg-slate-900/70 text-slate-200 hover:bg-slate-800 hover:text-lime-400 hover:border-lime-400/30 transition-all font-bold text-xs sm:text-sm inline-flex items-center justify-center gap-2"
-                      >
-                        <Sparkles className="w-4 h-4" strokeWidth={2.3} />
-                        Baixar 6 exemplos de teste
-                      </button>
-                    </div>
-                    <p className="text-[10px] sm:text-[11px] leading-snug text-slate-500">
-                      💡 Dica: abra o CSV no <strong>Google Sheets</strong> (Arquivo → Importar) e cole as colunas <code className="text-orange-400">F e G</code> nas respectivas linhas que estão vazias.
-                    </p>
-                  </motion.div>
                 </motion.div>
               ) : (
                 <motion.div

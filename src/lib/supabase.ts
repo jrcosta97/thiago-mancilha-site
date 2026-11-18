@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient, type PostgrestError } from '@supabas
 
 export type AlunoStatus = 'NOVO_LEAD' | 'EM_NEGOCIACAO' | 'ATIVO' | 'INATIVO' | 'PERDIDO';
 export type AgendamentoStatus = 'AGENDADO' | 'CONCLUIDO' | 'FALTOU' | 'CANCELADO';
-export type FaturaStatus = 'PAGO' | 'PENDENTE';
+export type FaturaStatus = 'PAID' | 'PENDING' | 'OVERDUE' | 'CANCELLED';
 
 export interface AlunosRow {
   id: string;
@@ -27,6 +27,7 @@ export interface AlunosRow {
   sheet_sync_at: string | null;
   whatsapp_link: string | null;
   mensalidade: number | null;
+  permuta: boolean;
   dia_vencimento: number | null;
   ultimo_pagamento_data: string | null;
 }
@@ -45,18 +46,21 @@ export interface AgendamentosRow {
 export interface FaturasRow {
   id: string;
   aluno_id: string;
-  mes_referencia: string;
+  mes_referencia: string | null;
   valor: number;
   data_vencimento: string | null;
   data_pagamento: string | null;
   status: FaturaStatus;
   observacao: string | null;
+  registrado_em: string | null;
+  registrado_por: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export type AlunosInsert = Omit<AlunosRow, 'id' | 'created_at' | 'updated_at' | 'sheet_sync_at'> & {
+export type AlunosInsert = Omit<AlunosRow, 'id' | 'created_at' | 'updated_at' | 'sheet_sync_at' | 'permuta'> & {
   sheet_sync_at?: string | null;
+  permuta?: boolean;
 };
 
 export interface Database {
@@ -83,6 +87,10 @@ export interface Database {
       alunos_fts_nome: {
         Args: { '': string };
         Returns: AlunosRow[];
+      };
+      record_current_month_payment: {
+        Args: { p_aluno_id: string };
+        Returns: { ok: true; duplicate: boolean; aluno: AlunosRow; fatura: FaturasRow };
       };
     };
     Enums: Record<string, never>;
@@ -329,15 +337,6 @@ export const insertAluno = async (
     return { data: null, error: null, validationErrors };
   }
 
-  if (import.meta.env.DEV && typeof console !== 'undefined' && typeof console.debug === 'function') {
-    try {
-      console.debug('%c[supabase] Insert aluno payload enviado:', 'color:#334155;font-weight:600', {
-        payload,
-        rawInput: raw,
-      });
-    } catch { /* ignore */ }
-  }
-
   // Timeout de segurança (15s) para não travar "Enviando..." infinito
   const hasWindow = typeof window !== 'undefined';
   const controller = hasWindow && typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -367,19 +366,6 @@ export const insertAluno = async (
 
     if (timeoutId !== undefined && hasWindow) window.clearTimeout(timeoutId);
 
-    if (import.meta.env.DEV && typeof console !== 'undefined') {
-      try {
-        if (error) {
-          console.error('%c[supabase] Insert ERRO:', 'color:#b91c1c;font-weight:700', {
-            error: error ?? null,
-            errorString: JSON.stringify(error, null, 2),
-          });
-        } else {
-          console.log('%c[supabase] Insert SUCESSO:', 'color:#15803d;font-weight:700', { inserted: data });
-        }
-      } catch { /* ignore */ }
-    }
-
     return {
       data: (data as AlunosRow) ?? null,
       error: (error as PostgrestError | Error | null) ?? null,
@@ -387,11 +373,6 @@ export const insertAluno = async (
     };
   } catch (err) {
     if (timeoutId !== undefined && hasWindow) window.clearTimeout(timeoutId);
-    if (import.meta.env.DEV && typeof console !== 'undefined') {
-      try {
-        console.error('[supabase] Insert EXCEPTION catch:', err);
-      } catch { /* ignore */ }
-    }
     return {
       data: null,
       error: err instanceof Error ? err : new Error(String(err ?? 'Erro desconhecido no insert')),
@@ -413,7 +394,8 @@ const getEdgeFunctionBaseUrl = (): string | null => {
 
 export interface InsertAlunoViaEdgeResult {
   ok: boolean;
-  data?: AlunosRow | null;
+  data?: Pick<AlunosRow, 'id'> | null;
+  duplicate?: boolean;
   error?: { message: string; code?: string; hint?: string; details?: string } | Error | null;
   validationErrors?: string[];
   statusCode?: number;
@@ -559,7 +541,8 @@ export const runSupabaseDiagnostics = async (): Promise<SupabaseDiagnosticReport
 };
 
 export const insertAlunoViaEdgeFunction = async (
-  raw: CreateAlunoPayload
+  raw: CreateAlunoPayload,
+  idempotencyKey: string = crypto.randomUUID(),
 ): Promise<InsertAlunoViaEdgeResult> => {
   const { valid, payload, errors: validationErrors } = validateCreateAlunoPayload(raw);
   if (!valid) {
@@ -567,13 +550,8 @@ export const insertAlunoViaEdgeFunction = async (
   }
 
   try {
-    if (import.meta.env.DEV && typeof console !== 'undefined' && typeof console.debug === 'function') {
-      try {
-        console.debug('%c[supabase-edge] Insert via Edge Function payload enviado:', 'color:#6d28d9;font-weight:600', {
-          payload,
-          rawInput: raw,
-        });
-      } catch { /* ignore */ }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+      return { ok: false, error: new Error('Identificador da tentativa inválido.') };
     }
 
     const edgeBaseUrl = getEdgeFunctionBaseUrl();
@@ -595,6 +573,7 @@ export const insertAlunoViaEdgeFunction = async (
           headers: {
             'Content-Type': 'application/json',
             'x-application-name': 'thiago-mancilha-site-via-edge',
+            'Idempotency-Key': idempotencyKey,
             ...(anonKey ? { apikey: anonKey } : {}),
             ...(anonKey ? { Authorization: `Bearer ${anonKey}` } : {}),
           },
@@ -606,19 +585,7 @@ export const insertAlunoViaEdgeFunction = async (
 
       const parsed = await parseJsonSafely(res);
 
-      if (import.meta.env.DEV && typeof console !== 'undefined') {
-        try {
-          if (res.ok) {
-            console.log('%c[supabase-edge] Insert SUCESSO (cors):', 'color:#15803d;font-weight:700', { parsed });
-          } else {
-            console.error('%c[supabase-edge] Insert ERRO HTTP (cors):', 'color:#b91c1c;font-weight:700', {
-              status: res.status,
-              statusText: res.statusText,
-              parsed,
-            });
-          }
-        } catch { /* ignore */ }
-      }
+      // Do not log response payloads or health details from the public form.
 
       if (!res.ok) {
         const errMsg =
@@ -636,7 +603,8 @@ export const insertAlunoViaEdgeFunction = async (
 
       return {
         ok: true,
-        data: (parsed?.data as AlunosRow | null) ?? null,
+        data: (parsed?.data as Pick<AlunosRow, 'id'> | null) ?? null,
+        duplicate: parsed?.duplicate === true,
         statusCode: res.status,
         transport: 'cors',
       };
@@ -689,7 +657,7 @@ export const insertAlunoViaEdgeFunction = async (
   } catch (err) {
     if (import.meta.env.DEV && typeof console !== 'undefined') {
       try {
-        console.error('[supabase-edge] Insert EXCEPTION catch:', err);
+      console.error('[supabase-edge] Unexpected submission transport failure');
       } catch { /* ignore */ }
     }
     return {

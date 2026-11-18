@@ -1,10 +1,11 @@
+import { WHATSAPP_NUMBER } from '@/lib/contact';
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Calculator, Sparkles, Flame, Dumbbell, Activity, Zap, Info, Scale, Ruler, ArrowRight, MessageCircle,
 } from 'lucide-react';
 
-const WHATSAPP_NUMBER = '5548988720439';
+
 
 type Gender = 'masc' | 'fem';
 type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'high' | 'athlete';
