@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Calendar, Dumbbell, Award } from 'lucide-react';
+import { Menu, X, CalendarDays } from 'lucide-react';
+import Logo from '@/components/brand/Logo';
 
 interface HeaderProps {
   onCTAClick: () => void;
@@ -12,7 +12,8 @@ export default function Header({ onCTAClick }: HeaderProps) {
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -30,94 +31,74 @@ export default function Header({ onCTAClick }: HeaderProps) {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled ? 'glass-effect py-3' : 'bg-transparent py-5'
+      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-300 border-b ${
+        scrolled || mobileOpen ? 'bg-brand-bg/[0.97] border-white/10' : 'bg-transparent border-transparent'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-        <a href="#top" className="flex items-center gap-3 group" onClick={(e) => { e.preventDefault(); handleNavClick('#top'); }}>
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-transform shadow-neon">
-            <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6 text-background" strokeWidth={2.5} />
-          </div>
-          <div className="flex flex-col leading-tight">
-            <span className="font-display font-extrabold text-text-primary text-base sm:text-lg tracking-tight">
-              Thiago Mancilha Reis<span className="text-accent">.</span>
-            </span>
-            <span className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-text-secondary tracking-wider uppercase">
-              <Award className="w-3 h-3 text-accent" strokeWidth={2.5} />
-              CREF 008289-G/AM · O básico que funciona.
-            </span>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] sm:h-20 flex items-center justify-between gap-6">
+        <a
+          href="#top"
+          aria-label="Thiago Mancilha — início"
+          onClick={(e) => { e.preventDefault(); handleNavClick('#top'); }}
+        >
+          <Logo />
         </a>
 
-        <nav className="hidden lg:flex items-center gap-7">
+        <nav className="hidden lg:flex items-center gap-10" aria-label="Seções do site">
           {navLinks.map((l) => (
             <a
               key={l.href}
               href={l.href}
               onClick={(e) => { e.preventDefault(); handleNavClick(l.href); }}
-              className="text-sm text-text-secondary hover:text-accent font-medium transition-colors relative group"
+              className="text-[0.82rem] font-semibold tracking-[0.18em] uppercase text-brand-muted hover:text-brand-ink transition-colors"
             >
               {l.label}
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent group-hover:w-full transition-all duration-300 rounded-full" />
             </a>
           ))}
         </nav>
 
         <div className="hidden md:block">
-          <button
-            onClick={onCTAClick}
-            type="button"
-            aria-label="Agendar Avaliação Gratuita"
-            className="h-10 sm:h-11 px-5 sm:px-6 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-transparent text-slate-200 hover:border-lime-400 hover:text-lime-400 text-sm font-extrabold whitespace-nowrap transition-all duration-300 ease-out active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F17]"
-          >
-            <Calendar className="w-4 h-4" strokeWidth={2.4} />
+          <button onClick={onCTAClick} type="button" className="btn-brand !min-h-[2.9rem] !px-6 !text-base">
+            <CalendarDays className="w-[18px] h-[18px]" strokeWidth={2.2} aria-hidden="true" />
             Agendar Avaliação Gratuita
           </button>
         </div>
 
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="md:hidden w-10 h-10 rounded-lg bg-background-card/60 flex items-center justify-center text-text-primary border border-white/5"
-          aria-label="Menu"
+          className="md:hidden w-11 h-11 flex items-center justify-center text-brand-ink border border-white/15"
+          aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
+          aria-expanded={mobileOpen}
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden overflow-hidden glass-effect border-t border-white/5"
-          >
-            <div className="px-4 py-4 space-y-1">
-              {navLinks.map((l) => (
-                <button
-                  key={l.href}
-                  onClick={() => handleNavClick(l.href)}
-                  className="w-full text-left px-4 py-3 rounded-lg text-text-secondary hover:text-accent hover:bg-white/5 font-medium transition-all"
-                >
-                  {l.label}
-                </button>
-              ))}
-              <div className="pt-3 px-1">
-                  <button
-                    onClick={() => { setMobileOpen(false); onCTAClick(); }}
-                    type="button"
-                    aria-label="Agendar Avaliação Gratuita"
-                    className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/40 text-slate-200 hover:border-lime-400 hover:text-lime-400 hover:bg-slate-900/60 text-sm font-extrabold transition-all duration-300 ease-out active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F17]"
-                  >
-                    <Calendar className="w-4 h-4" strokeWidth={2.4} />
-                    Agendar Avaliação Gratuita
-                  </button>
-              </div>
+      {mobileOpen && (
+        <div className="md:hidden border-t border-white/10 bg-brand-bg">
+          <div className="px-4 py-4 space-y-1">
+            {navLinks.map((l) => (
+              <button
+                key={l.href}
+                onClick={() => handleNavClick(l.href)}
+                className="w-full text-left px-2 py-3.5 border-b border-white/5 text-base font-semibold tracking-[0.14em] uppercase text-brand-muted hover:text-brand-ink"
+              >
+                {l.label}
+              </button>
+            ))}
+            <div className="pt-4">
+              <button
+                onClick={() => { setMobileOpen(false); onCTAClick(); }}
+                type="button"
+                className="btn-brand w-full"
+              >
+                <CalendarDays className="w-5 h-5" strokeWidth={2.2} aria-hidden="true" />
+                Agendar Avaliação Gratuita
+              </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

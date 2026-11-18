@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { getSupabase, isSupabaseConfigured, runSupabaseDiagnostics, type SupabaseDiagnosticReport } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { useBrandTheme } from '@/lib/useBrandTheme';
 
 const schema = z.object({
   email: z
@@ -32,6 +33,7 @@ const schema = z.object({
 type LoginValues = z.infer<typeof schema>;
 
 export default function LoginPage() {
+  useBrandTheme('admin');
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? '/admin';
@@ -140,15 +142,15 @@ export default function LoginPage() {
   };
 
   return (
-    <section className="min-h-screen w-full bg-background relative overflow-hidden">
+    <section className="min-h-screen w-full bg-brand-bg relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[560px] h-[560px] bg-lime-400/10 rounded-full blur-[140px]" />
-        <div className="absolute top-1/2 right-0 w-[460px] h-[460px] bg-emerald-500/10 rounded-full blur-[140px]" />
+        <div className="absolute inset-0 bg-grid opacity-40" />
+        <div className="absolute -right-16 top-0 h-full w-28 bg-brand-blue/80 -skew-x-[18deg] origin-top hidden md:block" />
       </div>
 
       <div className="relative max-w-md w-full mx-auto px-4 py-10 sm:py-16 min-h-screen flex flex-col justify-center">
         <div className="flex items-center justify-between mb-6">
-          <Link to="/" className="group inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-lime-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lime-400 rounded-lg px-2 py-1 ring-offset-background">
+          <Link to="/" className="group inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-lime-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lime-400 rounded-sm px-2 py-1 ring-offset-background">
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
             Voltar para o site
           </Link>
@@ -162,10 +164,10 @@ export default function LoginPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md shadow-[0_30px_80px_rgba(0,0,0,0.45)] p-6 sm:p-8"
+          className="w-full chamfer border border-white/15 bg-brand-surface p-6 sm:p-8"
         >
           <div className="flex items-start gap-4 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-lime-500/10 border border-lime-400/25 text-lime-400 flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-sm bg-lime-500/10 border border-lime-400/25 text-lime-400 flex items-center justify-center shrink-0">
               <LogIn className="w-6 h-6" strokeWidth={2} />
             </div>
             <div>
@@ -179,7 +181,7 @@ export default function LoginPage() {
           </div>
 
           {!supabaseOk && (
-            <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 flex gap-3 items-start">
+            <div className="mb-5 rounded-sm border border-amber-500/30 bg-amber-500/10 p-3.5 flex gap-3 items-start">
               <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" aria-hidden />
               <div className="text-sm">
                 <p className="font-semibold text-amber-300 mb-0.5">Supabase não configurado</p>
@@ -196,7 +198,7 @@ export default function LoginPage() {
             <div
               role="status"
               className={cn(
-                'mb-5 rounded-xl border p-3.5 flex gap-3 items-start text-sm',
+                'mb-5 rounded-sm border p-3.5 flex gap-3 items-start text-sm',
                 feedbackType === 'success' && 'border-emerald-500/30 bg-emerald-500/10',
                 feedbackType === 'error' && 'border-red-500/30 bg-red-500/10',
                 feedbackType === 'info' && 'border-sky-500/30 bg-sky-500/10'
@@ -231,7 +233,7 @@ export default function LoginPage() {
                   autoComplete="email"
                   placeholder="voce@exemplo.com.br"
                   className={cn(
-                    'w-full pl-10 pr-3 py-3 rounded-xl bg-slate-900/80 border border-slate-700/80 placeholder:text-slate-500 text-foreground',
+                    'w-full pl-10 pr-3 py-3 rounded-sm bg-brand-bg border border-white/20 placeholder:text-slate-500 text-foreground',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lime-400 focus-visible:border-lime-400 transition-all duration-300',
                     errors.email && 'border-red-500/70 focus-visible:ring-red-400'
                   )}
@@ -258,7 +260,7 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   placeholder="••••••••"
                   className={cn(
-                    'w-full pl-10 pr-3 py-3 rounded-xl bg-slate-900/80 border border-slate-700/80 placeholder:text-slate-500 text-foreground',
+                    'w-full pl-10 pr-3 py-3 rounded-sm bg-brand-bg border border-white/20 placeholder:text-slate-500 text-foreground',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lime-400 focus-visible:border-lime-400 transition-all duration-300',
                     errors.password && 'border-red-500/70 focus-visible:ring-red-400'
                   )}
@@ -277,8 +279,8 @@ export default function LoginPage() {
               type="submit"
               disabled={loading || !supabaseOk || !isValid}
               className={cn(
-                'w-full py-3 rounded-xl font-bold tracking-wide uppercase text-sm',
-                'bg-lime-400 text-black hover:bg-lime-300 border border-lime-400/70',
+                'w-full py-3 rounded-sm font-bold tracking-wide uppercase text-sm',
+                'bg-brand-blue text-white hover:bg-brand-blue-hover border border-brand-blue',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lime-400 ring-offset-background',
                 'disabled:opacity-60 disabled:cursor-not-allowed'
               )}
@@ -297,8 +299,8 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-slate-800/80 text-xs text-muted-foreground leading-relaxed">
-            <div className="mb-5 rounded-xl border border-slate-800/80 bg-slate-950/50 p-4">
+          <div className="mt-6 pt-5 border-t border-white/10 text-xs text-muted-foreground leading-relaxed">
+            <div className="mb-5 rounded-sm border border-white/10 bg-slate-950/50 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-slate-200">Diagnóstico rápido do Supabase</p>
@@ -311,7 +313,7 @@ export default function LoginPage() {
                   variant="outline"
                   onClick={handleRunDiagnostics}
                   disabled={diagnosticLoading}
-                  className="border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-slate-200"
+                  className="border-slate-700 bg-brand-bg hover:bg-slate-800 text-slate-200"
                 >
                   {diagnosticLoading ? (
                     <span className="inline-flex items-center gap-2">
@@ -330,7 +332,7 @@ export default function LoginPage() {
                     <div
                       key={step.id}
                       className={cn(
-                        'rounded-lg border px-3 py-2 text-xs',
+                        'rounded-sm border px-3 py-2 text-xs',
                         step.ok
                           ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-100'
                           : 'border-red-500/20 bg-red-500/5 text-red-100'

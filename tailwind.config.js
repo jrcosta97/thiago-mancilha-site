@@ -7,6 +7,22 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: {
+          bg: '#0A0D14',
+          surface: '#111622',
+          raised: '#161C2A',
+          blue: '#1446FF',
+          'blue-hover': '#2A5BFF',
+          'blue-text': '#6A91FF',
+          ink: '#F2F4F8',
+          muted: '#AEB6C6',
+          subtle: '#8891A5',
+        },
+        lime: {
+          300: 'rgb(var(--lime-300) / <alpha-value>)',
+          400: 'rgb(var(--lime-400) / <alpha-value>)',
+          500: 'rgb(var(--lime-500) / <alpha-value>)',
+        },
         background: {
           DEFAULT: 'var(--background)',
           card: '#161F2E',
@@ -65,7 +81,9 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Archivo', 'system-ui', 'sans-serif']
+        display: ['Archivo', 'system-ui', 'sans-serif'],
+        condensed: ['"Barlow Condensed"', 'Archivo', 'system-ui', 'sans-serif'],
+        barlow: ['Barlow', 'system-ui', 'sans-serif']
       },
       animation: {
         'float': 'float 3s ease-in-out infinite',

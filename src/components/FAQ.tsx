@@ -1,15 +1,14 @@
 import { WHATSAPP_NUMBER } from '@/lib/contact';
-import { motion } from 'framer-motion';
-import { MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { MessageCircle, Plus, Minus, ArrowRight, CalendarDays } from 'lucide-react';
 import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
 } from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { m } from 'framer-motion';
+import SectionLabel from '@/components/brand/SectionLabel';
+import { Reveal, EASE_OUT } from '@/components/motion/primitives';
 
 
 
@@ -97,111 +96,102 @@ export default function FAQ({ onCTAClick }: FAQProps) {
   const whatsappLink = `https://api.whatsapp.com/send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${whatsappMsg}`;
 
   return (
-    <section id="faq" className="py-12 relative">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center max-w-2xl mx-auto mb-8 space-y-2"
-        >
-          <h2 className="text-2xl md:text-3xl font-bold text-text-primary tracking-tight">
-            Tire suas dúvidas antes de começar
-          </h2>
-          <p className="text-sm md:text-base text-slate-400">
-            Respostas diretas para as dúvidas mais comuns antes de iniciar.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <Card className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 md:p-8 backdrop-blur-sm max-w-2xl mx-auto w-full mb-10">
-            <Accordion
-              defaultValue={['faqs-item-0']}
-              className="w-full"
-            >
-              {faqs.map((faq, i) => {
-                const miniBadge = getQuestionBadge(faq.q);
-                return (
-                  <AccordionItem
-                    key={`faq-${i}`}
-                    value={`faqs-item-${i}`}
-                    className={`border-b border-slate-800/60 ${
-                      i === faqs.length - 1 ? 'last:border-0' : ''
-                    }`}
-                  >
-                    <AccordionTrigger
-                      className="group/accordion-trigger relative hover:!no-underline hover:!bg-transparent !rounded-none !px-0 !py-0 [&_[data-slot=accordion-trigger-icon]]:!hidden **:data-[slot=accordion-trigger-icon]:!hidden"
-                    >
-                      <div className="flex items-center justify-between gap-4 text-left font-semibold text-slate-100 hover:text-lime-400 py-4 transition-all w-full aria-expanded:text-lime-400">
-                        <div className="flex items-center flex-1 min-w-0 gap-0">
-                          <span className="leading-snug min-w-0 text-base">
-                            {cleanQuestion(faq.q)}
-                          </span>
-                          {miniBadge.show && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                'text-[10px] text-lime-400 border-lime-500/30 bg-lime-500/10 shrink-0 ml-2 h-5 px-2 tracking-wide font-bold uppercase'
-                              )}
-                            >
-                              {miniBadge.label}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="shrink-0 flex items-center justify-center w-7 h-7 rounded-full bg-lime-400/10 border border-lime-500/20 text-lime-400 group-aria-expanded/accordion-trigger:bg-lime-400 group-aria-expanded/accordion-trigger:text-black group-aria-expanded/accordion-trigger:border-lime-400 transition-all">
-                          <ChevronDown className="w-4 h-4 shrink-0 group-aria-expanded/accordion-trigger:hidden transition-transform" />
-                          <ChevronUp className="w-4 h-4 shrink-0 hidden group-aria-expanded/accordion-trigger:inline-flex transition-transform" />
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="!pt-0 !pb-5 pl-0 pr-1">
-                      <div className="bg-slate-950/40 p-4 rounded-xl mt-1 text-slate-300 text-sm leading-relaxed border border-slate-800/40">
-                        {faq.a}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                );
-              })}
-            </Accordion>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mt-12 rounded-3xl !card-dark !bg-gradient-to-br !from-accent/10 via-background-card to-background-card !border !border-accent/20 p-8 sm:p-10 text-center shadow-neon"
-        >
-          <MessageCircle className="w-12 h-12 text-accent mx-auto mb-4" strokeWidth={1.5} />
-          <h3 className="font-display font-bold text-2xl sm:text-3xl text-text-primary mb-3">
-            Ainda tem dúvidas?
-          </h3>
-          <p className="text-text-secondary text-base sm:text-lg max-w-xl mx-auto mb-6">
-            Estamos a uma mensagem de distância para te ajudar a tomar a melhor decisão. Resposta rápida em minutos durante horário comercial.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
-            <a
-              href={whatsappLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl font-bold bg-[#25D366] text-white hover:bg-[#1ebe5b] transition-all shadow-[0_8px_30px_rgba(37,211,102,0.45)] group"
-            >
-              Falar no WhatsApp
-              <MessageCircle className="w-5 h-5" strokeWidth={2.5} />
-            </a>
-            <button
-              onClick={onCTAClick}
-              className="btn-secondary !py-3.5 text-sm font-bold"
-            >
-              Preencher Ficha de Avaliação
-            </button>
+    <>
+      <section id="faq" className="relative py-20 md:py-28 bg-brand-bg border-t border-white/10 scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
+          <div className="space-y-5 lg:sticky lg:top-28 self-start">
+            <SectionLabel>FAQ</SectionLabel>
+            <Reveal direction="diagonal">
+            <h2 className="title-display text-5xl sm:text-6xl text-brand-ink">
+              Tire suas dúvidas antes de começar
+            </h2>
+            </Reveal>
+            <p className="text-lg text-brand-muted">
+              Respostas diretas para as dúvidas mais comuns antes de iniciar.
+            </p>
           </div>
-        </motion.div>
-      </div>
-    </section>
+
+          <Accordion defaultValue={['faqs-item-0']} className="w-full border-t border-white/12">
+            {faqs.map((faq, i) => {
+              const miniBadge = getQuestionBadge(faq.q);
+              return (
+                <AccordionItem key={`faq-${i}`} value={`faqs-item-${i}`} className="border-b border-white/12">
+                  <AccordionTrigger
+                    className="group/accordion-trigger relative hover:!no-underline hover:!bg-transparent !rounded-none !px-0 !py-0 [&_[data-slot=accordion-trigger-icon]]:!hidden **:data-[slot=accordion-trigger-icon]:!hidden"
+                  >
+                    <div className="flex items-start justify-between gap-5 text-left py-5 w-full text-brand-ink group-aria-expanded/accordion-trigger:text-white">
+                      <span className="flex-1 min-w-0">
+                        {miniBadge.show && (
+                          <span className="block mb-1.5 text-[0.72rem] font-bold tracking-[0.18em] uppercase text-brand-blue-text">
+                            {miniBadge.label}
+                          </span>
+                        )}
+                        <span className="block text-lg font-semibold leading-snug">{cleanQuestion(faq.q)}</span>
+                      </span>
+                      <span className="shrink-0 grid place-items-center w-9 h-9 mt-0.5 border border-white/25 text-brand-ink group-aria-expanded/accordion-trigger:bg-brand-blue group-aria-expanded/accordion-trigger:border-brand-blue transition-colors">
+                        <Plus className="w-4 h-4 group-aria-expanded/accordion-trigger:hidden" strokeWidth={2.5} aria-hidden="true" />
+                        <Minus className="w-4 h-4 hidden group-aria-expanded/accordion-trigger:inline" strokeWidth={2.5} aria-hidden="true" />
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="!pt-0 !pb-6 pr-12">
+                    <p className="text-brand-muted text-base sm:text-[1.05rem] leading-relaxed border-l-2 border-brand-blue pl-4">
+                      {faq.a}
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        </div>
+      </section>
+
+      {/* Faixa azul inclinada de contato */}
+      <section aria-labelledby="cta-duvidas" className="relative py-6 md:py-10 bg-brand-bg overflow-hidden">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <m.div
+            aria-hidden="true"
+            className="absolute inset-y-0 left-0 right-0 mx-2 sm:mx-4 bg-brand-blue"
+            style={{ originX: 0 }}
+            initial={{ scaleX: 0, skewX: -10 }}
+            whileInView={{ scaleX: 1, skewX: -10 }}
+            viewport={{ once: true, amount: 0.5 }}
+            transition={{ duration: 0.7, ease: [0.76, 0, 0.24, 1] }}
+          />
+          <div className="relative grid md:grid-cols-[auto_1fr_auto] items-center gap-6 md:gap-10 px-6 sm:px-12 py-10 md:py-12">
+            <m.h3
+              id="cta-duvidas"
+              className="title-display text-5xl sm:text-6xl text-white"
+              initial={{ opacity: 0, x: -40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.55, delay: 0.4, ease: EASE_OUT }}
+            >
+              Ainda tem dúvidas?
+            </m.h3>
+            <m.p
+              className="text-white/90 text-lg leading-relaxed md:border-l md:border-white/40 md:pl-8 max-w-md"
+              initial={{ opacity: 0, x: -24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.5, delay: 0.52, ease: EASE_OUT }}
+            >
+              Estamos a uma mensagem de distância para te ajudar a tomar a melhor decisão. Resposta rápida em minutos durante horário comercial.
+            </m.p>
+            <Reveal delay={0.62} direction="right" amount={0.5} className="flex flex-col gap-3">
+              <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="btn-brand btn-brand-light group">
+                <MessageCircle className="w-5 h-5" strokeWidth={2.4} aria-hidden="true" />
+                Falar no WhatsApp
+                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" strokeWidth={2.4} aria-hidden="true" />
+              </a>
+              <button onClick={onCTAClick} type="button" className="inline-flex items-center justify-center gap-2 min-h-[2.9rem] px-5 text-base font-semibold text-white border border-white/60 hover:bg-white/10 transition-colors">
+                <CalendarDays className="w-4 h-4" strokeWidth={2.2} aria-hidden="true" />
+                Preencher Ficha de Avaliação
+              </button>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

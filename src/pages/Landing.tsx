@@ -7,12 +7,16 @@ import TDEECalculator from '@/components/TDEECalculator';
 import FAQ from '@/components/FAQ';
 import Footer from '@/components/Footer';
 import AnamnesisForm from '@/components/AnamnesisForm';
+import { useBrandTheme } from '@/lib/useBrandTheme';
+import { MotionProvider } from '@/components/motion/primitives';
 
 export default function Landing() {
   const [anamnesisOpen, setAnamnesisOpen] = useState(false);
+  useBrandTheme();
 
   return (
-    <div id="top" className="min-h-screen bg-background text-foreground relative overflow-x-hidden">
+    <MotionProvider>
+    <div id="top" className="min-h-screen bg-brand-bg text-brand-ink font-barlow relative overflow-x-hidden">
       <Header onCTAClick={() => setAnamnesisOpen(true)} />
       <main>
         <Hero onCTAClick={() => setAnamnesisOpen(true)} />
@@ -27,5 +31,6 @@ export default function Landing() {
         onClose={() => setAnamnesisOpen(false)}
       />
     </div>
+    </MotionProvider>
   );
 }

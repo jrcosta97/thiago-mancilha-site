@@ -1,6 +1,6 @@
 import { Suspense, lazy } from 'react';
-import { motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
+import SectionLabel from '@/components/brand/SectionLabel';
+import { Reveal, SlabIn } from '@/components/motion/primitives';
 
 const PlansCarousel = lazy(() => import('@/components/PlansCarousel'));
 
@@ -18,7 +18,7 @@ function PlansSkeleton() {
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className="relative w-full h-full flex flex-col !rounded-3xl !bg-card overflow-hidden border border-white/6 animate-pulse"
+            className="relative w-full h-full flex flex-col bg-brand-surface overflow-hidden border border-white/10 animate-pulse"
           >
             <div className="relative h-48 overflow-hidden bg-white/[0.04]">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent animate-[shimmer_1.6s_infinite]" />
@@ -36,8 +36,8 @@ function PlansSkeleton() {
               </div>
             </div>
             <div className="mt-auto px-5 sm:px-6 py-5 w-full space-y-2.5 border-t border-white/5">
-              <div className="h-12 w-full rounded-2xl bg-white/[0.05]" />
-              <div className="h-11 w-full rounded-2xl bg-white/[0.03]" />
+              <div className="h-12 w-full bg-white/[0.05]" />
+              <div className="h-11 w-full bg-white/[0.03]" />
             </div>
           </div>
         ))}
@@ -48,30 +48,24 @@ function PlansSkeleton() {
 
 export default function Plans({ onCTAClick }: PlansProps) {
   return (
-    <section id="servicos" className="py-24 md:py-32 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-accent/5 rounded-full blur-[120px]" />
-      </div>
+    <section id="servicos" className="relative py-20 md:py-28 bg-brand-surface/40 border-t border-white/10 overflow-hidden scroll-mt-20">
+      <SlabIn inView skew={-32} from="left" className="pointer-events-none absolute -left-20 top-0 w-[260px] h-[120px] bg-brand-blue/90 hidden md:block" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center max-w-3xl mx-auto mb-16 space-y-5"
-        >
-          <span className="badge-chip mx-auto">
-            <Sparkles className="w-3.5 h-3.5" />
-            PLANOS & INVESTIMENTO
-          </span>
-          <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-text-primary tracking-tight leading-tight">
-            O investimento <span className="text-gradient">certo</span> para a sua saúde
+        <div className="max-w-3xl mb-12 md:mb-14 space-y-5">
+          <SectionLabel>Planos &amp; Investimento</SectionLabel>
+          <Reveal direction="diagonal">
+          <h2 className="title-display text-5xl sm:text-6xl text-brand-ink">
+            O investimento <span className="text-brand-blue-text">certo</span> para a sua saúde
           </h2>
-          <p className="text-text-secondary text-lg leading-relaxed">
+          </Reveal>
+          <Reveal delay={0.12}>
+          <p className="text-brand-muted text-lg leading-relaxed">
             Valores pensados para ser um compromisso com resultados sustentáveis. Nada de assinaturas abusivas,
             contratos longos ou pegadinhas — só acompanhamento humano, próximo e de verdade.
           </p>
-        </motion.div>
+          </Reveal>
+        </div>
 
         <Suspense fallback={<PlansSkeleton />}>
           <PlansCarousel onCTAClick={onCTAClick} />

@@ -39,9 +39,32 @@ export interface AgendamentosRow {
   dia_semana: number;
   status: AgendamentoStatus;
   observacoes: string | null;
+  /** Preenchido quando a aula é uma ocorrência registrada de um horário fixo. */
+  horario_fixo_id?: string | null;
   created_at: string;
   updated_at: string;
 }
+
+/** Regra de recorrência: "este aluno treina nestes dias, neste horário". */
+export interface HorariosFixosRow {
+  id: string;
+  tenant_id: string;
+  aluno_id: string;
+  /** 0 = domingo … 6 = sábado */
+  dias_semana: number[];
+  /** "HH:MM:SS" (horário de São Paulo) */
+  hora: string;
+  duracao_min: number;
+  inicio: string;
+  fim: string | null;
+  ativo: boolean;
+  observacoes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type HorariosFixosInsert = Pick<HorariosFixosRow, 'aluno_id' | 'dias_semana' | 'hora'> &
+  Partial<Pick<HorariosFixosRow, 'duracao_min' | 'inicio' | 'fim' | 'ativo' | 'observacoes'>>;
 
 export interface FaturasRow {
   id: string;
@@ -75,6 +98,11 @@ export interface Database {
         Row: AgendamentosRow;
         Insert: Omit<AgendamentosRow, 'id' | 'created_at' | 'updated_at' | 'dia_semana'> & { dia_semana?: number };
         Update: Partial<Omit<AgendamentosRow, 'id' | 'created_at' | 'updated_at' | 'dia_semana'>>;
+      };
+      horarios_fixos: {
+        Row: HorariosFixosRow;
+        Insert: HorariosFixosInsert;
+        Update: Partial<HorariosFixosInsert>;
       };
       faturas: {
         Row: FaturasRow;

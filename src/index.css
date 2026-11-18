@@ -201,3 +201,234 @@ body {
     @apply font-sans;
   }
 }
+
+/* ========================================================================== */
+/*  REBRAND 2026 — tema "TM///" (azul elétrico sobre grafite)                 */
+/*  Ativado por <html class="brand"> na landing e no link na bio.             */
+/*  O painel admin continua com o tema anterior.                               */
+/* ========================================================================== */
+:root {
+  --lime-300: 190 242 100;
+  --lime-400: 163 230 53;
+  --lime-500: 132 204 22;
+}
+
+html.brand {
+  --lime-300: 143 170 255;
+  --lime-400: 106 145 255;
+  --lime-500: 20 70 255;
+
+  --background: #0A0D14;
+  --foreground: #F2F4F8;
+  --card: #111622;
+  --card-foreground: #F2F4F8;
+  --popover: #111622;
+  --popover-foreground: #F2F4F8;
+  --primary: #6A91FF;
+  --primary-foreground: #0A0D14;
+  --secondary: #161C2A;
+  --secondary-foreground: #F2F4F8;
+  --muted: #161C2A;
+  --muted-foreground: #AEB6C6;
+  --accent: #6A91FF;
+  --accent-foreground: #0A0D14;
+  --border: rgba(255, 255, 255, 0.10);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: #6A91FF;
+  --radius: 0.25rem;
+  background-color: #0A0D14;
+}
+html.brand body {
+  background-color: #0A0D14;
+  color: #F2F4F8;
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-size: 17px;
+}
+html.brand .font-display {
+  font-family: 'Barlow Condensed', 'Archivo', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+html.brand ::-webkit-scrollbar-track { background: #0A0D14; }
+html.brand ::-webkit-scrollbar-thumb:hover { background: #1446FF; }
+
+/* --- Efeitos antigos neutralizados (componentes que ainda os usam) ------- */
+html.brand .shadow-neon,
+html.brand [class*="rgba(204,255,0"],
+html.brand [class*="rgba(37,211,102"] { box-shadow: none !important; }
+html.brand [class*="bg-[#25D366]"] { background-color: #1446FF !important; }
+html.brand [class*="hover:bg-[#1ebe5b]"]:hover { background-color: #2A5BFF !important; }
+html.brand .glass-effect {
+  background: rgba(10, 13, 20, 0.97) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html.brand .text-gradient {
+  background: none;
+  -webkit-text-fill-color: #6A91FF;
+  color: #6A91FF;
+}
+html.brand .badge-chip {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  color: #6A91FF;
+  letter-spacing: 0.22em;
+}
+html.brand .card-dark {
+  background: #111622;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 0.25rem;
+}
+html.brand .btn-primary {
+  background: #1446FF;
+  color: #fff;
+  border-radius: 0;
+  box-shadow: none;
+}
+html.brand .btn-secondary {
+  background: transparent;
+  border-radius: 0;
+  backdrop-filter: none;
+}
+html.brand .btn-secondary:hover { color: #fff; border-color: #6A91FF; }
+
+/* --- Peças do sistema visual -------------------------------------------- */
+@layer components {
+  /* Título: condensado, itálico, caixa alta */
+  .title-display {
+    font-family: 'Barlow Condensed', 'Archivo', system-ui, sans-serif;
+    font-style: italic;
+    font-weight: 900;
+    text-transform: uppercase;
+    line-height: 0.95;
+    letter-spacing: 0.005em;
+  }
+  /* Rótulo de seção: "/// SOBRE MIM" */
+  .section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: 'Barlow', system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: #F2F4F8;
+  }
+  /* Recorte em diagonal no canto superior esquerdo e inferior direito */
+  .chamfer {
+    clip-path: polygon(44px 0, 100% 0, 100% calc(100% - 44px), calc(100% - 44px) 100%, 0 100%, 0 44px);
+  }
+  .chamfer-sm {
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+  }
+  /* Botão em paralelogramo */
+  .btn-brand {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+    padding: 0 2rem;
+    font-family: 'Barlow Condensed', 'Archivo', system-ui, sans-serif;
+    font-style: italic;
+    font-weight: 800;
+    font-size: 1.15rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #FFFFFF;
+    background: #1446FF;
+    clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+  .btn-brand:hover { background: #2A5BFF; }
+  .btn-brand:active { transform: translateY(1px); }
+  .btn-brand:focus-visible { outline: 3px solid #F2F4F8; outline-offset: 3px; }
+  .btn-brand-light {
+    color: #0A0D14;
+    background: #F2F4F8;
+  }
+  .btn-brand-light:hover { background: #FFFFFF; }
+  .btn-outline-brand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    min-height: 3.25rem;
+    padding: 0 1.5rem;
+    font-family: 'Barlow', system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #F2F4F8;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .btn-outline-brand:hover { border-color: #6A91FF; color: #FFFFFF; }
+  .btn-outline-brand:focus-visible { outline: 3px solid #6A91FF; outline-offset: 2px; }
+  /* Texto vazado (monograma, números) */
+  .text-outline {
+    color: transparent;
+    -webkit-text-stroke: 1.5px rgba(106, 145, 255, 0.45);
+  }
+  /* Tratamento de foto: puxa para o azul e escurece de leve */
+  .photo-treated {
+    filter: saturate(0.55) contrast(1.08) brightness(0.92);
+  }
+  .photo-tint {
+    background: #1446FF;
+    mix-blend-mode: color;
+    opacity: 0.28;
+  }
+  /* Fundo com grade fina */
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+}
+
+/* --- Painel admin: rótulos, abas e botões condensados em caixa alta ----- */
+html.brand-admin .uppercase,
+html.brand-admin button,
+html.brand-admin [role="tab"],
+html.brand-admin label {
+  font-family: 'Barlow Condensed', 'Archivo', system-ui, sans-serif;
+  letter-spacing: 0.04em;
+}
+html.brand-admin button,
+html.brand-admin [role="tab"] {
+  text-transform: uppercase;
+  font-weight: 700;
+}
+html.brand-admin label { font-size: 0.9rem; }
+html.brand-admin .uppercase { font-weight: 700; }
+html.brand-admin input,
+html.brand-admin select,
+html.brand-admin textarea {
+  border-radius: 2px;
+}
+html.brand-admin input:focus-visible,
+html.brand-admin select:focus-visible,
+html.brand-admin textarea:focus-visible {
+  border-color: #6A91FF;
+}
+
+/* --- Movimento: brilho diagonal ao passar o mouse nos botões ------------ */
+.btn-brand { overflow: hidden; }
+.btn-brand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+  transform: translateX(-120%);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.btn-brand:hover::after { transform: translateX(120%); }
+@media (prefers-reduced-motion: reduce) {
+  .btn-brand::after { display: none; }
+  html { scroll-behavior: auto; }
+}
