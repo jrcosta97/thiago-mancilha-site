@@ -83,7 +83,7 @@ export interface AgendaUnificadaProps {
 
 export default function AgendaUnificada(props: AgendaUnificadaProps) {
   const { alunos, agendamentos, faturas, horarios, today, searchTerm } = props;
-  const [view, setView] = useState<View>('MES');
+  const [view, setView] = useState<View>(() => window.matchMedia('(max-width: 639px)').matches ? 'DIA' : 'MES');
   const [sel, setSel] = useState<string>(today);
   const [cursor, setCursor] = useState(() => ({ year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) }));
   const [showAulas, setShowAulas] = useState(true);

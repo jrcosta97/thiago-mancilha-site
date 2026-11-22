@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import PainelAppAccess from '@/components/admin/PainelAppAccess';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeftRight,
@@ -357,9 +358,10 @@ export default function AdminDashboard() {
   const [selected, setSelected] = useState<AlunosRow | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [filterTab, setFilterTab] = useState<DashboardFilter>('ALL');
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(() => new URLSearchParams(window.location.search).get('abrir') === 'cadastro');
   const [openConversionForId, setOpenConversionForId] = useState<string | null>(null);
-  const [mainTab, setMainTab] = useState<MainAdminTab>('CRM');
+  const [mainTab, setMainTab] = useState<MainAdminTab>(() =>
+    new URLSearchParams(window.location.search).get('abrir') === 'agenda' ? 'AGENDA' : 'CRM');
   const [agendaSelectedDate, setAgendaSelectedDate] = useState<string>(() => toISODateLocal(new Date()));
   const [isAgendaOpen, setIsAgendaOpen] = useState(false);
   const [selectedAgendamento, setSelectedAgendamento] = useState<AgendamentosRow | null>(null);
@@ -718,7 +720,7 @@ export default function AdminDashboard() {
 
       <div className="relative max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-start gap-3">
             <Link
               to="/"
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-lime-400 transition-colors rounded-sm px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-lime-400 ring-offset-background"
@@ -726,6 +728,7 @@ export default function AdminDashboard() {
               <ArrowLeft className="w-4 h-4" />
               Voltar ao site
             </Link>
+            <PainelAppAccess />
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <Button

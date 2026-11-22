@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PainelAppAccess from '@/components/admin/PainelAppAccess';
 import { motion } from 'framer-motion';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -298,6 +299,7 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
+          <PainelAppAccess />
 
           <div className="mt-6 pt-5 border-t border-white/10 text-xs text-muted-foreground leading-relaxed">
             <div className="mb-5 rounded-sm border border-white/10 bg-slate-950/50 p-4">
