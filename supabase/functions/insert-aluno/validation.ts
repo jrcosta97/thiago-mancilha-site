@@ -1,8 +1,10 @@
 import { normalizeStudentEmail, STUDENT_EMAIL_ERROR } from './email.ts';
+import { ageFromBirthDate } from './birth-date.ts';
 
 export type LeadPayload = {
   nome: string;
   email: string;
+  data_nascimento: string;
   idade: number;
   whatsapp: string;
   objetivo: string;
@@ -38,12 +40,13 @@ export const validateAndBuildLead = (raw: Record<string, unknown>): { payload: L
   const email = normalizeStudentEmail(raw.email);
   if (!email) errors.push(`email: ${STUDENT_EMAIL_ERROR}`);
 
-  const idade = Number(raw.idade);
-  if (!Number.isInteger(idade) || idade < 10 || idade > 100) errors.push('idade: deve ser um inteiro entre 10 e 100');
+  const data_nascimento = typeof raw.data_nascimento === 'string' ? raw.data_nascimento : '';
+  const idade = ageFromBirthDate(data_nascimento);
+  if (idade === null || idade < 14 || idade > 99) errors.push('data_nascimento: informe uma data válida para idade entre 14 e 99 anos');
 
   const whatsapp = formatWhatsAppBR(raw.whatsapp);
   if (!whatsapp) errors.push('whatsapp: informe um número brasileiro com 10 ou 11 dígitos');
-  if (!email || errors.length) return { payload: null, errors };
+  if (!email || idade === null || errors.length) return { payload: null, errors };
 
   const has_injury = raw.has_injury === true || String(raw.has_injury).toLowerCase() === 'true';
   const digits = digitsOnly(whatsapp);
@@ -52,6 +55,7 @@ export const validateAndBuildLead = (raw: Record<string, unknown>): { payload: L
     payload: {
       nome,
       email,
+      data_nascimento,
       idade,
       whatsapp,
       objetivo: String(raw.objetivo ?? '').trim().slice(0, 120) || 'nao_informado',

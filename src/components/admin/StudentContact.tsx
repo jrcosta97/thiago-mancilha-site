@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { getSupabase, type AlunosRow } from '@/lib/supabase';
+import { ageFromBirthDate, formatBirthDate } from '../../../supabase/functions/insert-aluno/birth-date';
 import {
   normalizeStudentEmail,
   STUDENT_EMAIL_ERROR,
@@ -15,6 +16,7 @@ export default function StudentContact({ aluno, onUpdated }: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [birthDraft, setBirthDraft] = useState<string | null>(null);
 
   const copy = async (value: string, label: string) => {
     setFeedback('');
@@ -60,9 +62,11 @@ export default function StudentContact({ aluno, onUpdated }: {
   };
 
   const email = aluno.email;
+  const birth = aluno.data_nascimento;
   const contactText = [
     `Nome: ${aluno.nome}`,
     ...(email ? [`E-mail: ${email}`] : []),
+    `Data de nascimento: ${birth ? formatBirthDate(birth) : 'não informada'}`,
     `WhatsApp: ${aluno.whatsapp}`,
   ].join('\n');
 
@@ -74,6 +78,37 @@ export default function StudentContact({ aluno, onUpdated }: {
           Copiar dados do aluno
         </Button>
       </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3">
+        <p className="text-sm">Nascimento: {birth ? formatBirthDate(birth) : 'pendente'}</p>
+        <Button type="button" size="sm" variant="outline" onClick={() => { setBirthDraft(birth ?? ''); setError(''); }}>
+          {birth ? 'Editar nascimento' : 'Adicionar nascimento'}
+        </Button>
+      </div>
+      {birthDraft !== null && (
+        <form className="flex flex-wrap gap-2" onSubmit={async (event) => {
+          event.preventDefault();
+          if (saving) return;
+          const age = ageFromBirthDate(birthDraft);
+          if (age === null || age < 10 || age > 100) { setError('Informe uma data válida para idade entre 10 e 100 anos.'); return; }
+          const sb = getSupabase();
+          if (!sb) { setError('Não foi possível conectar ao painel.'); return; }
+          setSaving(true); setError('');
+          try {
+            const { data, error: updateError } = await sb.from('alunos').update({ data_nascimento: birthDraft, idade: age } as never).eq('id', aluno.id).select().single();
+            if (updateError || !data) throw new Error('Falha ao salvar');
+            onUpdated(data as AlunosRow); setBirthDraft(null); setFeedback('Data de nascimento salva.');
+          } catch { setError('Não foi possível salvar a data. Tente novamente.'); }
+          finally { setSaving(false); }
+        }}>
+          <label className="basis-full text-sm">Data de nascimento
+            <input type="date" required value={birthDraft} disabled={saving} onChange={(event) => { setBirthDraft(event.target.value); setError(''); }}
+              className="mt-1 block min-h-11 w-full rounded border border-white/20 bg-brand-bg px-3 text-base" />
+          </label>
+          <Button type="submit" size="sm" disabled={saving}>Salvar data</Button>
+          <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => { setBirthDraft(null); setError(''); }}>Cancelar</Button>
+          {error && <p role="alert" className="basis-full text-sm text-red-300">{error}</p>}
+        </form>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="min-w-0 break-words text-sm">{aluno.nome}</p>
         <Button type="button" size="sm" variant="outline" onClick={() => void copy(aluno.nome, 'Nome copiado.')}>

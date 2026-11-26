@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient, type PostgrestError } from '@supabase/supabase-js';
 import { normalizeStudentEmail, STUDENT_EMAIL_ERROR } from '../../supabase/functions/insert-aluno/email';
+import { ageFromBirthDate } from '../../supabase/functions/insert-aluno/birth-date';
 
 // -----------------------------------------------------------------------------
 // Tipos da tabela `alunos` (supabase schema public)
@@ -15,6 +16,7 @@ export interface AlunosRow {
   updated_at: string;
   nome: string;
   email: string | null;
+  data_nascimento: string | null;
   idade: number | null;
   whatsapp: string;
   objetivo: string | null;
@@ -253,6 +255,7 @@ export const formatSupabaseError = (
 export interface CreateAlunoPayload {
   nome: string;
   email: string;
+  data_nascimento: string;
   idade: number;
   whatsapp: string;
   objetivo: string;
@@ -299,9 +302,9 @@ export const validateCreateAlunoPayload = (
   const email = normalizeStudentEmail(raw.email);
   if (!email) errors.push(STUDENT_EMAIL_ERROR);
 
-  const idade = Number(raw.idade);
-  if (!Number.isFinite(idade) || !Number.isInteger(idade) || idade < 10 || idade > 100)
-    errors.push(`idade: inválida "${String(raw.idade)}" (deve ser inteiro entre 10 e 100)`);
+  const idade = ageFromBirthDate(raw.data_nascimento);
+  if (idade === null || idade < 10 || idade > 100)
+    errors.push('Data de nascimento inválida.');
 
   const whatsappFormatado = formatWhatsAppBR(raw.whatsapp);
   const okFormato =
@@ -342,6 +345,7 @@ export const validateCreateAlunoPayload = (
   const payload: AlunosInsert = {
     nome,
     email,
+    data_nascimento: raw.data_nascimento,
     idade,
     whatsapp: whatsappFormatado || String(raw.whatsapp ?? ''),
     objetivo,

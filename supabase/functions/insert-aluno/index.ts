@@ -13,6 +13,7 @@ import { resolveIdempotencyKey, validateAndBuildLead } from './validation.ts'
 interface CreateAlunoPayload {
   nome: string
   email: string
+  data_nascimento: string
   idade: number
   whatsapp: string
   objetivo: string

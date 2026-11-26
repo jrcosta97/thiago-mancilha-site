@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ageFromBirthDate } from '../../supabase/functions/insert-aluno/birth-date';
 import PainelAppAccess from '@/components/admin/PainelAppAccess';
 import StudentContact from '@/components/admin/StudentContact';
 import { normalizeStudentEmail, STUDENT_EMAIL_ERROR, STUDENT_EMAIL_MAX_LENGTH } from '../../supabase/functions/insert-aluno/email';
@@ -113,7 +114,7 @@ interface ManualAlunoFormState {
   nome: string;
   email: string;
   whatsapp: string;
-  idade: string;
+  data_nascimento: string;
   objetivo: string;
   mensalidade: string;
   dia_vencimento: string;
@@ -180,7 +181,7 @@ const EMPTY_MANUAL_FORM: ManualAlunoFormState = {
   nome: '',
   email: '',
   whatsapp: '',
-  idade: '',
+  data_nascimento: '',
   objetivo: '',
   mensalidade: '',
   dia_vencimento: '',
@@ -701,7 +702,7 @@ export default function AdminDashboard() {
       formatDateTimeBR(r.created_at),
       r.nome,
       r.whatsapp,
-      r.idade == null ? '' : String(r.idade),
+      (r.data_nascimento ? ageFromBirthDate(r.data_nascimento) : r.idade)?.toString() ?? '',
       r.objetivo ?? '',
       STATUS_LABEL[r.status] ?? r.status,
       getOrigemLabel(r.origem),
@@ -1239,7 +1240,7 @@ function ManualCreateModal({
     const nome = form.nome.trim();
     const email = normalizeStudentEmail(form.email);
     const whatsapp = formatWhatsApp(form.whatsapp);
-    const idade = parseOptionalInteger(form.idade);
+    const idade = ageFromBirthDate(form.data_nascimento);
     const mensalidade = parseCurrencyInput(form.mensalidade);
     const diaVencimento = parseOptionalInteger(form.dia_vencimento);
 
@@ -1255,8 +1256,8 @@ function ManualCreateModal({
       setError('Informe um WhatsApp válido com DDD.');
       return;
     }
-    if (idade !== null && (idade < 10 || idade > 100)) {
-      setError('A idade, quando informada, deve ficar entre 10 e 100.');
+    if (idade === null || idade < 10 || idade > 100) {
+      setError('Informe uma data de nascimento válida para idade entre 10 e 100 anos.');
       return;
     }
     if (!form.permuta && mensalidade !== null && mensalidade < 0) {
@@ -1292,6 +1293,7 @@ function ManualCreateModal({
         email,
         whatsapp: whatsapp.formatted,
         idade,
+        data_nascimento: form.data_nascimento,
         objetivo: form.objetivo.trim() || null,
         goal_details: null,
         frequency: 'cadastro-manual',
@@ -1383,13 +1385,10 @@ function ManualCreateModal({
               placeholder="aluno@exemplo.com"
             />
           </Field>
-          <Field label="Idade">
-            <input
-              value={form.idade}
-              onChange={(e) => setField('idade', e.target.value.replace(/[^\d]/g, ''))}
-              className={INPUT_CLASS}
-              placeholder="Opcional"
-            />
+          <Field label="Data de nascimento" required>
+            <input type="date" required value={form.data_nascimento}
+              onChange={(e) => setField('data_nascimento', e.target.value)}
+              className={INPUT_CLASS} />
           </Field>
           <Field label="Objetivo">
             <input
@@ -1821,7 +1820,7 @@ function DetailModal({
 
         <Section title="Identificação" defaultOpen>
           <div className="divide-y divide-slate-800/70">
-            {row('Idade', formatAgeLabel(aluno.idade), { Icon: Hash })}
+            {row('Idade', formatAgeLabel(aluno.data_nascimento ? ageFromBirthDate(aluno.data_nascimento) : aluno.idade), { Icon: Hash })}
             {row(
               'WhatsApp',
               aluno.whatsapp_link ? (
@@ -2008,7 +2007,7 @@ function DetailModal({
               const rows = [
                 ['Nome', aluno.nome],
                 ['WhatsApp', aluno.whatsapp],
-                ['Idade', aluno.idade == null ? '' : `${aluno.idade}`],
+                ['Idade', (aluno.data_nascimento ? ageFromBirthDate(aluno.data_nascimento) : aluno.idade)?.toString() ?? ''],
                 ['Objetivo', aluno.objetivo ?? ''],
                 ['Status', STATUS_LABEL[aluno.status] ?? aluno.status],
                 ['Origem', aluno.origem ?? ''],

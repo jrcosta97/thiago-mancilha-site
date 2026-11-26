@@ -22,6 +22,7 @@ import {
   insertAlunoViaEdgeFunction,
   type AlunoStatus,
 } from '@/lib/supabase';
+import { ageFromBirthDate } from '../../supabase/functions/insert-aluno/birth-date';
 import { getSubmissionAttempt } from '@/lib/submission-attempt';
 import { normalizeStudentEmail, STUDENT_EMAIL_MAX_LENGTH } from '../../supabase/functions/insert-aluno/email';
 
@@ -42,11 +43,7 @@ const schema = z.object({
   email: z.string().trim().refine((email) => normalizeStudentEmail(email) !== null, {
     message: 'Informe um e-mail válido que você consiga acessar.',
   }),
-  idade: z.coerce
-    .number({ error: 'Idade deve ser um número' })
-    .int({ message: 'Idade deve ser um número inteiro' })
-    .min(14, { message: 'Idade mínima para avaliação é 14 anos' })
-    .max(99, { message: 'Idade máxima aceita é 99 anos' }),
+  data_nascimento: z.string().refine((value) => { const age = ageFromBirthDate(value); return age !== null && age >= 14 && age <= 99; }, { message: 'Informe uma data de nascimento válida para idade entre 14 e 99 anos.' }),
   whatsapp: z.string()
     .trim()
     .transform((v) => v.replace(/\D/g, ''))
@@ -123,7 +120,7 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
   const defaultValues = useMemo<FormInputValues>(() => ({
     nome: '',
     email: '',
-    idade: undefined as unknown as number,
+    data_nascimento: '',
     whatsapp: '',
     goal: '',
     goalDetails: '',
@@ -165,17 +162,14 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
       if (name === 'whatsapp' && type === 'change' && typeof v.whatsapp === 'string') {
         setValue('whatsapp', cleanWhats(v.whatsapp) as never, { shouldValidate: true, shouldDirty: true });
       }
-      if (name === 'idade' && type === 'change') {
-        const raw = String(v.idade ?? '').replace(/\D/g, '').slice(0, 2);
-        setValue('idade', (raw === '' ? undefined : Number(raw)) as never, { shouldValidate: true, shouldDirty: true });
-      }
+
     });
     return () => sub.unsubscribe();
   }, [watch, setValue]);
 
   const fieldsForStep = (s: number): Path<FormInputValues>[] => {
     switch (s) {
-      case 0: return ['nome', 'email', 'idade', 'whatsapp'];
+      case 0: return ['nome', 'email', 'data_nascimento', 'whatsapp'];
       case 1: return ['goal'];
       case 2: return ['hasInjury', 'injuryDetails'];
       case 3: return ['frequency', 'preferencia'];
@@ -216,7 +210,7 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
     const report: SheetValidationReport = buildSheetRow(
       {
         nome: data.nome,
-        idade: Number.isFinite(Number(data.idade)) ? Number(data.idade) : String(data.idade ?? ''),
+        idade: ageFromBirthDate(data.data_nascimento) ?? '',
         whatsapp: data.whatsapp,
         goal: data.goal,
         goalDetails: data.goalDetails,
@@ -262,12 +256,13 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
       'https://script.google.com/macros/s/AKfycbzWebhookPlaceholder/exec';
 
     // ----- Supabase payload -----
-    const idadeNumeric = Number.isFinite(Number(data.idade)) ? Number(data.idade) : NaN;
+    const idadeNumeric = ageFromBirthDate(data.data_nascimento) ?? NaN;
     const hasInjuryBool = data.hasInjury === 's';
     const supabasePayload = {
       nome: String(data.nome ?? '').trim(),
       email: data.email,
       idade: idadeNumeric,
+      data_nascimento: data.data_nascimento,
       whatsapp: String(data.whatsapp ?? '').trim(),
       objetivo: String(data.goal ?? '').trim(),
       goal_details: String(data.goalDetails ?? '').trim() || null,
@@ -353,7 +348,7 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
     `Olá Thiago! Acabei de preencher a Ficha de Avaliação no site. Seguem meus dados:
 
 • Nome: ${values.nome}
-• Idade: ${values.idade} anos
+• Idade:  ${ageFromBirthDate(values.data_nascimento || '') ?? '—'} anos
 • WhatsApp: ${whatsappWhats}
 • Objetivo principal: ${objetivoWhats || String(values.goal ?? '')}${(values.goalDetails ?? '').trim() && values.goal !== 'outro' ? ` · Detalhes: ${values.goalDetails}` : ''}
 • Frequência semanal: ${frequenciaWhats || String(values.frequency ?? '')}
@@ -611,21 +606,11 @@ Quando você puder me chamar para conversarmos melhor? Obrigado!`
                         <div>
                           <label className="text-[11px] sm:text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 inline-flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-lime-400" />
-                            Idade
+                            Data de nascimento
                           </label>
-                          <input
-                            {...register('idade', { valueAsNumber: true })}
-                            value={Number.isFinite(getValues('idade')) ? (getValues('idade') as number) : ''}
-                            onChange={(e) => {
-                              const raw = e.target.value.replace(/\D/g, '').slice(0, 2);
-                              setValue('idade', (raw === '' ? undefined : Number(raw)) as never, { shouldValidate: true, shouldDirty: true });
-                            }}
-                            placeholder="Ex: 52"
-                            type="text"
-                            inputMode="numeric"
-                            className={`${inputBase} h-12 sm:h-14 font-display text-xl ${fieldError('idade') ? errRing : okRing}`}
-                          />
-                          {fieldError('idade') && errorLabel(fieldError('idade') as string)}
+                          <input {...register('data_nascimento')} type="date" autoComplete="bday" aria-label="Data de nascimento"
+                            className={`${inputBase} h-12 sm:h-14 ${fieldError('data_nascimento') ? errRing : okRing}`} />
+                          {fieldError('data_nascimento') && errorLabel(fieldError('data_nascimento') as string)}
                         </div>
                         <div>
                           <label className="text-[11px] sm:text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 inline-flex items-center gap-2">

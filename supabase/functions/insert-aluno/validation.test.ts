@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { resolveIdempotencyKey, validateAndBuildLead } from './validation';
 
-const valid = { nome: 'Maria Teste', email: '  Maria+treino@exemplo.com  ', idade: 32, whatsapp: '11999990000', status: 'ATIVO' };
+const valid = { nome: 'Maria Teste', email: '  Maria+treino@exemplo.com  ', data_nascimento: '1994-04-12', whatsapp: '11999990000', status: 'ATIVO' };
 
 describe('validação pública de lead', () => {
   it.each([
     [{ ...valid, nome: 'M' }, 'nome'],
-    [{ ...valid, idade: 9 }, 'idade'],
-    [{ ...valid, idade: 101 }, 'idade'],
+    [{ ...valid, data_nascimento: '2030-01-01' }, 'data_nascimento'],
+    [{ ...valid, data_nascimento: '2024-02-30' }, 'data_nascimento'],
     [{ ...valid, whatsapp: '123' }, 'whatsapp'],
     [{ ...valid, email: undefined }, 'email'],
     [{ ...valid, email: 'maria@' }, 'email'],
