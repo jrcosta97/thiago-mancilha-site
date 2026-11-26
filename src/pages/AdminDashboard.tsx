@@ -244,11 +244,17 @@ const formatCurrencyBR = (value: number | null | undefined): string =>
       }).format(value);
 
 const parseCurrencyInput = (value: string): number | null => {
-  const cleaned = value.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.').trim();
-  if (!cleaned) return null;
-  const parsed = Number(cleaned);
+  const cleaned = value.trim();
+  if (!/^\d{1,9}([,.]\d{1,2})?$/.test(cleaned)) return null;
+  const parsed = Number(cleaned.replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : null;
 };
+
+const isCurrencyInput = (value: string): boolean =>
+  /^\d{0,9}([,.]\d{0,2})?$/.test(value);
+
+const isDueDayInput = (value: string): boolean =>
+  /^\d{0,2}$/.test(value) && (value === '' || Number(value) <= 31);
 
 const parseOptionalInteger = (value: string): number | null => {
   const cleaned = value.trim();
@@ -1148,7 +1154,7 @@ export default function AdminDashboard() {
 
       <AnimatePresence>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogContent className="sm:max-w-xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-white/10 bg-slate-900/95">
+          <DialogContent showCloseButton={false} className="sm:max-w-xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-white/10 bg-slate-900/95">
             <div className="sr-only">
               <DialogTitle>Cadastrar aluno manualmente</DialogTitle>
               <DialogDescription>
@@ -1167,7 +1173,7 @@ export default function AdminDashboard() {
       </AnimatePresence>
 
       <Dialog open={horarioModal.open} onOpenChange={(open) => !open && setHorarioModal({ open: false, horario: null })}>
-        <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-white/10 bg-brand-surface">
+        <DialogContent showCloseButton={false} className="sm:max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-white/10 bg-brand-surface">
           <div className="sr-only">
             <DialogTitle>{horarioModal.horario ? 'Editar horário fixo' : 'Novo horário fixo'}</DialogTitle>
             <DialogDescription>Defina os dias e o horário em que o aluno treina toda semana.</DialogDescription>
@@ -1195,7 +1201,7 @@ export default function AdminDashboard() {
             if (!open) setSelectedAgendamento(null);
           }}
         >
-          <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-white/10 bg-slate-900/95">
+          <DialogContent showCloseButton={false} className="sm:max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 border border-white/10 bg-slate-900/95">
             <div className="sr-only">
               <DialogTitle>{selectedAgendamento ? 'Editar aula' : 'Agendar aula'}</DialogTitle>
               <DialogDescription>
@@ -1254,6 +1260,10 @@ function ManualCreateModal({
     }
     if (!whatsapp.valid) {
       setError('Informe um WhatsApp válido com DDD.');
+      return;
+    }
+    if (!form.permuta && form.mensalidade.trim() && mensalidade === null) {
+      setError('Informe uma mensalidade válida, com até duas casas decimais.');
       return;
     }
     if (idade === null || idade < 10 || idade > 100) {
@@ -1347,6 +1357,7 @@ function ManualCreateModal({
         <button
           type="button"
           onClick={onClose}
+          aria-label="Fechar cadastro de aluno"
           className="w-9 h-9 rounded-sm border border-white/20 text-slate-400 hover:text-lime-400 hover:border-lime-400 hover:bg-lime-400/10 inline-flex items-center justify-center"
         >
           <X className="w-4.5 h-4.5" />
@@ -1405,7 +1416,8 @@ function ManualCreateModal({
           {!form.permuta && <><Field label="Valor da Mensalidade (R$)">
             <input
               value={form.mensalidade}
-              onChange={(e) => setField('mensalidade', e.target.value)}
+              onChange={(e) => { if (isCurrencyInput(e.target.value)) setField('mensalidade', e.target.value); }}
+              inputMode="decimal"
               className={INPUT_CLASS}
               placeholder={form.status === 'ATIVO' ? 'Obrigatório para aluno ativo' : 'Ex.: 299,90'}
             />
@@ -1413,7 +1425,9 @@ function ManualCreateModal({
           <Field label="Dia do Vencimento">
             <input
               value={form.dia_vencimento}
-              onChange={(e) => setField('dia_vencimento', e.target.value.replace(/[^\d]/g, ''))}
+              onChange={(e) => { if (isDueDayInput(e.target.value)) setField('dia_vencimento', e.target.value); }}
+              inputMode="numeric"
+              maxLength={2}
               className={INPUT_CLASS}
               placeholder={form.status === 'ATIVO' ? 'Obrigatório para aluno ativo' : '1 a 31'}
             />
@@ -1707,7 +1721,8 @@ function DetailModal({
                 <Field label="Mensalidade">
                   <input
                     value={draft.mensalidade}
-                    onChange={(e) => setDraft((s) => ({ ...s, mensalidade: e.target.value }))}
+                    onChange={(e) => { const value = e.target.value; if (isCurrencyInput(value)) setDraft((s) => ({ ...s, mensalidade: value })); }}
+                    inputMode="decimal"
                     className={INPUT_CLASS}
                     placeholder="Ex.: 299,90"
                   />
@@ -1715,7 +1730,9 @@ function DetailModal({
                 <Field label="Dia do vencimento">
                   <input
                     value={draft.dia_vencimento}
-                    onChange={(e) => setDraft((s) => ({ ...s, dia_vencimento: e.target.value.replace(/[^\d]/g, '') }))}
+                    onChange={(e) => { const value = e.target.value; if (isDueDayInput(value)) setDraft((s) => ({ ...s, dia_vencimento: value })); }}
+                    inputMode="numeric"
+                    maxLength={2}
                     className={INPUT_CLASS}
                     placeholder="1 a 31"
                   />
@@ -2146,6 +2163,7 @@ function AgendaModal({
         <button
           type="button"
           onClick={onClose}
+          aria-label="Fechar agendamento"
           className="w-9 h-9 rounded-sm border border-white/20 text-slate-400 hover:text-lime-400 hover:border-lime-400 hover:bg-lime-400/10 inline-flex items-center justify-center"
         >
           <X className="w-4.5 h-4.5" />
