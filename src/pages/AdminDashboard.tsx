@@ -1117,7 +1117,10 @@ export default function AdminDashboard() {
 
       <AnimatePresence>
         <Dialog open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
-          <DialogContent className="sm:max-w-3xl max-h-[92vh] overflow-hidden p-0 gap-0 border border-white/10 bg-slate-900/95">
+          <DialogContent
+            showCloseButton={false}
+            className="sm:max-w-3xl max-h-[92vh] overflow-hidden p-0 gap-0 border border-white/10 bg-slate-900/95"
+          >
             <div className="sr-only">
               <DialogTitle>Ficha completa do aluno</DialogTitle>
               <DialogDescription>
