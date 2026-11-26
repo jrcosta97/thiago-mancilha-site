@@ -1,10 +1,11 @@
--- Run only in an isolated Supabase branch after 20261109120000_crm_delivery.sql.
+-- Run only in an isolated database after the CRM and student e-mail migrations.
 begin;
 do $$
 declare
   v_key uuid := gen_random_uuid();
   v_payload jsonb := jsonb_build_object(
-    'nome', 'Lead Ficticio Teste', 'idade', 30, 'whatsapp', '(11) 99999-0000',
+    'nome', 'Lead Ficticio Teste', 'email', '  teste+lead@example.com  ',
+    'idade', 30, 'whatsapp', '(11) 99999-0000',
     'objetivo', 'Teste', 'frequency', '3 vezes por semana', 'has_injury', false,
     'status', 'ATIVO'
   );
@@ -13,7 +14,7 @@ declare
   v_second jsonb;
 begin
   v_first := public.insert_lead_idempotent(v_key, v_payload);
-  v_replay := public.insert_lead_idempotent(v_key, v_payload);
+  v_replay := public.insert_lead_idempotent(v_key, v_payload || '{"email":"outro@example.com"}'::jsonb);
   v_second := public.insert_lead_idempotent(gen_random_uuid(), v_payload);
   if v_first->'data'->>'id' is distinct from v_replay->'data'->>'id' then
     raise exception 'Same request id created a second student';
@@ -23,6 +24,10 @@ begin
   end if;
   if v_first->'data'->>'status' is distinct from 'NOVO_LEAD' then
     raise exception 'Client-supplied status was not overridden';
+  end if;
+  if v_first->'data'->>'email' is distinct from 'teste+lead@example.com'
+     or v_replay->'data'->>'email' is distinct from 'teste+lead@example.com' then
+    raise exception 'Lead e-mail was not saved or changed on replay';
   end if;
   if v_second->'data'->>'id' is not distinct from v_first->'data'->>'id' then
     raise exception 'Distinct request id did not create a distinct lead';

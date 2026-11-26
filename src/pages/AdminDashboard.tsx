@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PainelAppAccess from '@/components/admin/PainelAppAccess';
+import StudentContact from '@/components/admin/StudentContact';
+import { normalizeStudentEmail, STUDENT_EMAIL_ERROR, STUDENT_EMAIL_MAX_LENGTH } from '../../supabase/functions/insert-aluno/email';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeftRight,
@@ -17,7 +19,6 @@ import {
   Activity,
   HeartPulse,
   ListTodo,
-  UserCircle,
   Hash,
   Loader2,
   AlertTriangle,
@@ -110,6 +111,7 @@ interface DashboardState {
 
 interface ManualAlunoFormState {
   nome: string;
+  email: string;
   whatsapp: string;
   idade: string;
   objetivo: string;
@@ -176,6 +178,7 @@ const AGENDA_STATUS_LABEL: Record<AgendamentoStatus, string> = {
 
 const EMPTY_MANUAL_FORM: ManualAlunoFormState = {
   nome: '',
+  email: '',
   whatsapp: '',
   idade: '',
   objetivo: '',
@@ -1231,6 +1234,7 @@ function ManualCreateModal({
     if (saving) return;
 
     const nome = form.nome.trim();
+    const email = normalizeStudentEmail(form.email);
     const whatsapp = formatWhatsApp(form.whatsapp);
     const idade = parseOptionalInteger(form.idade);
     const mensalidade = parseCurrencyInput(form.mensalidade);
@@ -1238,6 +1242,10 @@ function ManualCreateModal({
 
     if (nome.length < 2) {
       setError('Informe o nome completo do aluno.');
+      return;
+    }
+    if (!email) {
+      setError(STUDENT_EMAIL_ERROR);
       return;
     }
     if (!whatsapp.valid) {
@@ -1278,6 +1286,7 @@ function ManualCreateModal({
       const isLeadRecord = isLeadStatus(form.status) || form.status === 'PERDIDO';
       const payload = {
         nome,
+        email,
         whatsapp: whatsapp.formatted,
         idade,
         objetivo: form.objetivo.trim() || null,
@@ -1355,6 +1364,20 @@ function ManualCreateModal({
               onChange={(e) => setField('whatsapp', formatWhatsApp(e.target.value).formatted)}
               className={INPUT_CLASS}
               placeholder="(11) 99999-9999"
+            />
+          </Field>
+          <Field label="E-mail" className="sm:col-span-2" required>
+            <input
+              type="email"
+              autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              required
+              maxLength={STUDENT_EMAIL_MAX_LENGTH}
+              value={form.email}
+              onChange={(e) => setField('email', e.target.value)}
+              className={INPUT_CLASS}
+              placeholder="aluno@exemplo.com"
             />
           </Field>
           <Field label="Idade">
@@ -1653,6 +1676,7 @@ function DetailModal({
       </div>
 
       <div className="px-5 sm:px-6 py-5 space-y-4">
+        <StudentContact key={aluno.id} aluno={aluno} onUpdated={onUpdated} />
         <Section title="CRM e cobrança" defaultOpen>
           {canConvert && !conversionMode && (
             <div className="mb-4 rounded-sm border border-emerald-400/30 bg-emerald-500/10 p-4">
@@ -1794,7 +1818,6 @@ function DetailModal({
 
         <Section title="Identificação" defaultOpen>
           <div className="divide-y divide-slate-800/70">
-            {row('Nome', aluno.nome, { Icon: UserCircle, accent: true })}
             {row('Idade', formatAgeLabel(aluno.idade), { Icon: Hash })}
             {row(
               'WhatsApp',

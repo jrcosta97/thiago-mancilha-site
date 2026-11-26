@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient, type PostgrestError } from '@supabase/supabase-js';
+import { normalizeStudentEmail, STUDENT_EMAIL_ERROR } from '../../supabase/functions/insert-aluno/email';
 
 // -----------------------------------------------------------------------------
 // Tipos da tabela `alunos` (supabase schema public)
@@ -13,6 +14,7 @@ export interface AlunosRow {
   created_at: string;
   updated_at: string;
   nome: string;
+  email: string | null;
   idade: number | null;
   whatsapp: string;
   objetivo: string | null;
@@ -250,6 +252,7 @@ export const formatSupabaseError = (
 
 export interface CreateAlunoPayload {
   nome: string;
+  email: string;
   idade: number;
   whatsapp: string;
   objetivo: string;
@@ -293,6 +296,8 @@ export const validateCreateAlunoPayload = (
 
   const nome = String(raw.nome ?? '').trim();
   if (nome.length < 2) errors.push('nome: mínimo 2 caracteres');
+  const email = normalizeStudentEmail(raw.email);
+  if (!email) errors.push(STUDENT_EMAIL_ERROR);
 
   const idade = Number(raw.idade);
   if (!Number.isFinite(idade) || !Number.isInteger(idade) || idade < 10 || idade > 100)
@@ -336,6 +341,7 @@ export const validateCreateAlunoPayload = (
 
   const payload: AlunosInsert = {
     nome,
+    email,
     idade,
     whatsapp: whatsappFormatado || String(raw.whatsapp ?? ''),
     objetivo,

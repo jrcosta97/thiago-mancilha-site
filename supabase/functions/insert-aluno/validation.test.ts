@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveIdempotencyKey, validateAndBuildLead } from './validation';
 
-const valid = { nome: 'Maria Teste', idade: 32, whatsapp: '11999990000', status: 'ATIVO' };
+const valid = { nome: 'Maria Teste', email: '  Maria+treino@exemplo.com  ', idade: 32, whatsapp: '11999990000', status: 'ATIVO' };
 
 describe('validação pública de lead', () => {
   it.each([
@@ -9,6 +9,8 @@ describe('validação pública de lead', () => {
     [{ ...valid, idade: 9 }, 'idade'],
     [{ ...valid, idade: 101 }, 'idade'],
     [{ ...valid, whatsapp: '123' }, 'whatsapp'],
+    [{ ...valid, email: undefined }, 'email'],
+    [{ ...valid, email: 'maria@' }, 'email'],
   ])('rejeita campo inválido %s', (payload, field) => {
     const result = validateAndBuildLead(payload);
     expect(result.payload).toBeNull();
@@ -19,6 +21,7 @@ describe('validação pública de lead', () => {
     const result = validateAndBuildLead(valid);
     expect(result.errors).toEqual([]);
     expect(result.payload).toMatchObject({ status: 'NOVO_LEAD', origem: 'anamnese-site', whatsapp: '(11) 99999-0000' });
+    expect(result.payload?.email).toBe('Maria+treino@exemplo.com');
     expect(result.payload?.whatsapp_link).toBe('https://api.whatsapp.com/send?phone=5511999990000');
   });
 

@@ -23,6 +23,7 @@ import {
   type AlunoStatus,
 } from '@/lib/supabase';
 import { getSubmissionAttempt } from '@/lib/submission-attempt';
+import { normalizeStudentEmail, STUDENT_EMAIL_MAX_LENGTH } from '../../supabase/functions/insert-aluno/email';
 
 
 
@@ -38,6 +39,9 @@ const schema = z.object({
     .refine((v) => v.split(/\s+/).filter(Boolean).length >= 2, {
       message: 'Informe nome e sobrenome (mínimo 2 palavras)',
     }),
+  email: z.string().trim().refine((email) => normalizeStudentEmail(email) !== null, {
+    message: 'Informe um e-mail válido que você consiga acessar.',
+  }),
   idade: z.coerce
     .number({ error: 'Idade deve ser um número' })
     .int({ message: 'Idade deve ser um número inteiro' })
@@ -118,6 +122,7 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
 
   const defaultValues = useMemo<FormInputValues>(() => ({
     nome: '',
+    email: '',
     idade: undefined as unknown as number,
     whatsapp: '',
     goal: '',
@@ -170,7 +175,7 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
 
   const fieldsForStep = (s: number): Path<FormInputValues>[] => {
     switch (s) {
-      case 0: return ['nome', 'idade', 'whatsapp'];
+      case 0: return ['nome', 'email', 'idade', 'whatsapp'];
       case 1: return ['goal'];
       case 2: return ['hasInjury', 'injuryDetails'];
       case 3: return ['frequency', 'preferencia'];
@@ -261,6 +266,7 @@ export default function AnamnesisForm({ isOpen, onClose }: AnamnesisFormProps) {
     const hasInjuryBool = data.hasInjury === 's';
     const supabasePayload = {
       nome: String(data.nome ?? '').trim(),
+      email: data.email,
       idade: idadeNumeric,
       whatsapp: String(data.whatsapp ?? '').trim(),
       objetivo: String(data.goal ?? '').trim(),
@@ -581,6 +587,25 @@ Quando você puder me chamar para conversarmos melhor? Obrigado!`
                           className={`${inputBase} h-12 sm:h-14 ${fieldError('nome') ? errRing : okRing}`}
                         />
                         {fieldError('nome') && errorLabel(fieldError('nome') as string)}
+                      </div>
+                      <div>
+                        <label htmlFor="anamnese-email" className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-300">
+                          E-mail
+                        </label>
+                        <input
+                          {...register('email')}
+                          id="anamnese-email"
+                          type="email"
+                          autoComplete="email"
+                          autoCapitalize="none"
+                          spellCheck={false}
+                          maxLength={STUDENT_EMAIL_MAX_LENGTH}
+                          aria-required="true"
+                          aria-invalid={Boolean(errors.email)}
+                          placeholder="voce@exemplo.com"
+                          className={`${inputBase} h-12 sm:h-14 ${errors.email ? errRing : okRing}`}
+                        />
+                        {errors.email?.message && errorLabel(errors.email.message)}
                       </div>
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div>

@@ -1,5 +1,8 @@
+import { normalizeStudentEmail, STUDENT_EMAIL_ERROR } from './email.ts';
+
 export type LeadPayload = {
   nome: string;
+  email: string;
   idade: number;
   whatsapp: string;
   objetivo: string;
@@ -32,13 +35,15 @@ export const validateAndBuildLead = (raw: Record<string, unknown>): { payload: L
   const errors: string[] = [];
   const nome = String(raw.nome ?? '').trim().slice(0, 120);
   if (nome.length < 2) errors.push('nome: mínimo 2 caracteres');
+  const email = normalizeStudentEmail(raw.email);
+  if (!email) errors.push(`email: ${STUDENT_EMAIL_ERROR}`);
 
   const idade = Number(raw.idade);
   if (!Number.isInteger(idade) || idade < 10 || idade > 100) errors.push('idade: deve ser um inteiro entre 10 e 100');
 
   const whatsapp = formatWhatsAppBR(raw.whatsapp);
   if (!whatsapp) errors.push('whatsapp: informe um número brasileiro com 10 ou 11 dígitos');
-  if (errors.length) return { payload: null, errors };
+  if (!email || errors.length) return { payload: null, errors };
 
   const has_injury = raw.has_injury === true || String(raw.has_injury).toLowerCase() === 'true';
   const digits = digitsOnly(whatsapp);
@@ -46,6 +51,7 @@ export const validateAndBuildLead = (raw: Record<string, unknown>): { payload: L
     errors,
     payload: {
       nome,
+      email,
       idade,
       whatsapp,
       objetivo: String(raw.objetivo ?? '').trim().slice(0, 120) || 'nao_informado',

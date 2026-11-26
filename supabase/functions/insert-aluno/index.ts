@@ -12,6 +12,7 @@ import { resolveIdempotencyKey, validateAndBuildLead } from './validation.ts'
 // Tipos locais (copiados do front para compatibilidade)
 interface CreateAlunoPayload {
   nome: string
+  email: string
   idade: number
   whatsapp: string
   objetivo: string
